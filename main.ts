@@ -1676,248 +1676,363 @@ function getDashboardHTML(): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZtoApi - 实时监控面板</title>
+    <title>API调用看板</title>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            color: #333;
+            background-color: #f5f5f5;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
         }
-        .header {
+        h1 {
+            color: #333;
             text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #667eea;
+            margin-bottom: 30px;
         }
-        .stats-grid {
+        .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
         .stat-card {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.5rem;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
             text-align: center;
-            border: 2px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .stat-value {
-            font-size: 2rem;
+            font-size: 24px;
             font-weight: bold;
-            color: #667eea;
-            margin-bottom: 0.5rem;
+            color: #007bff;
         }
         .stat-label {
-            font-size: 0.875rem;
-            color: #64748b;
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
         }
-        .requests-section {
-            margin-top: 2rem;
+        .requests-container {
+            margin-top: 30px;
         }
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #1e293b;
+        .requests-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .request-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            background: #f1f5f9;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+        .requests-table th, .requests-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
         }
-        .request-info {
-            flex: 1;
-        }
-        .request-path {
-            font-weight: 500;
-            color: #1e293b;
-        }
-        .request-time {
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-        .request-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
+        .requests-table th {
+            background-color: #f8f9fa;
         }
         .status-success {
-            background: #dcfce7;
-            color: #16a34a;
+            color: #28a745;
         }
         .status-error {
-            background: #fecaca;
-            color: #dc2626;
+            color: #dc3545;
         }
         .refresh-info {
             text-align: center;
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e2e8f0;
-            color: #64748b;
-            font-size: 0.875rem;
+            margin-top: 20px;
+            color: #6c757d;
+            font-size: 14px;
         }
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: #64748b;
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .pagination-container button {
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination-container button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .pagination-container button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .chart-container {
+            margin-top: 30px;
+            height: 300px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 ZtoApi 监控面板</h1>
-            <p>实时API调用统计和性能监控</p>
-        </div>
+        <h1>API调用看板</h1>
         
-        <div class="stats-grid">
+        <div class="stats-container">
             <div class="stat-card">
                 <div class="stat-value" id="total-requests">0</div>
-                <div class="stat-label">📊 总请求数</div>
+                <div class="stat-label">总请求数</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="successful-requests">0</div>
-                <div class="stat-label">✅ 成功请求</div>
+                <div class="stat-label">成功请求</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="failed-requests">0</div>
-                <div class="stat-label">❌ 失败请求</div>
+                <div class="stat-label">失败请求</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="avg-response-time">0s</div>
-                <div class="stat-label">⚡ 平均响应时间</div>
+                <div class="stat-label">平均响应时间</div>
             </div>
         </div>
         
-        <div class="requests-section">
-            <h2 class="section-title">🔄 最近请求</h2>
-            <div id="requests-list">
-                <div class="loading">加载中...</div>
+        <div class="chart-container">
+            <h2>请求统计图表</h2>
+            <canvas id="requestsChart"></canvas>
+        </div>
+        
+        <div class="requests-container">
+            <h2>实时请求</h2>
+            <table class="requests-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>模型</th>
+                        <th>方法</th>
+                        <th>状态</th>
+                        <th>耗时</th>
+                        <th>User Agent</th>
+                    </tr>
+                </thead>
+                <tbody id="requests-tbody">
+                    <!-- 请求记录将通过JavaScript动态添加 -->
+                </tbody>
+            </table>
+            <div class="pagination-container">
+                <button id="prev-page" disabled>上一页</button>
+                <span id="page-info">第 1 页，共 1 页</span>
+                <button id="next-page" disabled>下一页</button>
             </div>
         </div>
         
         <div class="refresh-info">
-            数据每 3 秒自动刷新 • 最后更新: <span id="last-update">--</span>
+            数据每5秒自动刷新一次
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const elements = {
-            totalRequests: document.getElementById('total-requests'),
-            successfulRequests: document.getElementById('successful-requests'),
-            failedRequests: document.getElementById('failed-requests'),
-            avgResponseTime: document.getElementById('avg-response-time'),
-            requestsList: document.getElementById('requests-list'),
-            lastUpdate: document.getElementById('last-update')
-        };
-
-        async function fetchStats() {
-            try {
-                const response = await fetch('/dashboard/stats');
-                if (!response.ok) throw new Error('Stats fetch failed');
-                const data = await response.json();
-                updateStats(data);
-                return true;
-                } catch (error) {
-                console.error('Error fetching stats:', error);
-                return false;
-            }
+        // 全局变量
+        let allRequests = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let requestsChart = null;
+        
+        // 更新统计数据
+        function updateStats() {
+            fetch('/dashboard/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-requests').textContent = data.totalRequests || 0;
+                    document.getElementById('successful-requests').textContent = data.successfulRequests || 0;
+                    document.getElementById('failed-requests').textContent = data.failedRequests || 0;
+                    document.getElementById('avg-response-time').textContent = ((data.averageResponseTime || 0) / 1000).toFixed(2) + 's';
+                })
+                .catch(error => console.error('Error fetching stats:', error));
         }
-
-        async function fetchRequests() {
-            try {
-                const response = await fetch('/dashboard/requests');
-                if (!response.ok) throw new Error('Requests fetch failed');
-                const data = await response.json();
-                updateRequests(Array.isArray(data) ? data : []);
-                return true;
-                } catch (error) {
-                console.error('Error fetching requests:', error);
-                return false;
-            }
+        
+        // 更新请求列表
+        function updateRequests() {
+            fetch('/dashboard/requests')
+                .then(response => response.json())
+                .then(data => {
+                    // 检查数据是否为数组
+                    if (!Array.isArray(data)) {
+                        console.error('返回的数据不是数组:', data);
+                        return;
+                    }
+                    
+                    // 保存所有请求数据
+                    allRequests = data;
+                    
+                    // 按时间倒序排列
+                    allRequests.sort((a, b) => {
+                        const timeA = new Date(a.timestamp);
+                        const timeB = new Date(b.timestamp);
+                        return timeB - timeA;
+                    });
+                    
+                    // 更新表格
+                    updateTable();
+                    
+                    // 更新图表
+                    updateChart();
+                    
+                    // 更新分页信息
+                    updatePagination();
+                })
+                .catch(error => console.error('Error fetching requests:', error));
         }
-
-        function updateStats(data) {
-            elements.totalRequests.textContent = data.totalRequests || 0;
-            elements.successfulRequests.textContent = data.successfulRequests || 0;
-            elements.failedRequests.textContent = data.failedRequests || 0;
+        
+        // 更新表格显示
+        function updateTable() {
+            const tbody = document.getElementById('requests-tbody');
+            tbody.innerHTML = '';
             
-            const avgTime = (data.averageResponseTime || 0) / 1000;
-            elements.avgResponseTime.textContent = avgTime.toFixed(2) + 's';
+            // 计算当前页的数据范围
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const currentRequests = allRequests.slice(startIndex, endIndex);
+            
+            currentRequests.forEach(request => {
+                const row = document.createElement('tr');
+                
+                // 格式化时间 - 检查时间戳是否有效
+                let timeStr = "Invalid Date";
+                if (request.timestamp) {
+                    try {
+                        const time = new Date(request.timestamp);
+                        if (!isNaN(time.getTime())) {
+                            timeStr = time.toLocaleTimeString();
+                        }
+                    } catch (e) {
+                        console.error("时间格式化错误:", e);
+                    }
+                }
+                
+                // 判断模型名称
+                let modelName = "GLM-4.5";
+                if (request.path && request.path.includes('glm-4.5v')) {
+                    modelName = "GLM-4.5V";
+                } else if (request.model) {
+                    modelName = request.model;
+                }
+                
+                // 状态样式
+                const statusClass = request.status >= 200 && request.status < 300 ? 'status-success' : 'status-error';
+                const status = request.status || "undefined";
+                
+                // 截断 User Agent，避免过长
+                let userAgent = request.user_agent || "undefined";
+                if (userAgent.length > 30) {
+                    userAgent = userAgent.substring(0, 30) + "...";
+                }
+                
+                row.innerHTML = "<td>" + timeStr + "</td>" + "<td>" + modelName + "</td>" + "<td>" + (request.method || "undefined") + "</td>" + "<td class='" + statusClass + "'>" + status + "</td>" + "<td>" + ((request.duration / 1000).toFixed(2) || "undefined") + "s</td>" + "<td title='" + (request.user_agent || "") + "'>" + userAgent + "</td>";
+                
+                tbody.appendChild(row);
+            });
         }
-
-        function updateRequests(requests) {
-            if (!Array.isArray(requests) || requests.length === 0) {
-                elements.requestsList.innerHTML = '<div class="loading">暂无请求记录</div>';
-                return;
+        
+        // 更新分页信息
+        function updatePagination() {
+            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
+            document.getElementById('page-info').textContent = "第 " + currentPage + " 页，共 " + totalPages + " 页";
+            
+            document.getElementById('prev-page').disabled = currentPage <= 1;
+            document.getElementById('next-page').disabled = currentPage >= totalPages;
+        }
+        
+        // 更新图表
+        function updateChart() {
+            const ctx = document.getElementById('requestsChart').getContext('2d');
+            
+            // 准备图表数据 - 最近20条请求的响应时间
+            const chartData = allRequests.slice(0, 20).reverse();
+            const labels = chartData.map(req => {
+                const time = new Date(req.timestamp);
+                return time.toLocaleTimeString();
+            });
+            const responseTimes = chartData.map(req => req.duration);
+            
+            // 如果图表已存在，先销毁
+            if (requestsChart) {
+                requestsChart.destroy();
             }
             
-            requests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            const recentRequests = requests.slice(0, 10);
-
-            const html = recentRequests.map(request => {
-                const time = new Date(request.timestamp).toLocaleTimeString();
-                const status = request.status || 0;
-                const statusClass = status >= 200 && status < 300 ? 'status-success' : 'status-error';
-                const duration = ((request.duration || 0) / 1000).toFixed(2);
-                const method = request.method || 'GET';
-                const path = request.path || '/';
-
-                return '<div class="request-item">' +
-                    '<div class="request-info">' +
-                    '<div class="request-path">' + method + ' ' + path + '</div>' +
-                    '<div class="request-time">' + time + '</div>' +
-                    '</div>' +
-                    '<div>' +
-                    '<span class="request-status ' + statusClass + '">' + status + '</span>' +
-                    '<span style="margin-left: 0.5rem; color: #64748b; font-size: 0.875rem;">' + duration + 's</span>' +
-                    '</div>' +
-                    '</div>';
-            }).join('');
-
-            elements.requestsList.innerHTML = html;
+            // 创建新图表
+            requestsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '响应时间 (s)',
+                        data: responseTimes.map(time => time / 1000),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '响应时间 (s)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '时间'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '最近20条请求的响应时间趋势 (s)'
+                        }
+                    }
+                }
+            });
         }
-
-        function updateLastUpdateTime() {
-            elements.lastUpdate.textContent = new Date().toLocaleTimeString();
-        }
-
-        async function refreshData() {
-            const [statsSuccess, requestsSuccess] = await Promise.all([
-                fetchStats(),
-                fetchRequests()
-            ]);
-
-            if (statsSuccess && requestsSuccess) {
-                updateLastUpdateTime();
+        
+        // 分页按钮事件
+        document.getElementById('prev-page').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateTable();
+                updatePagination();
             }
-        }
-
-        function init() {
-            refreshData();
-            setInterval(refreshData, 3000);
-        }
-
-        document.addEventListener('DOMContentLoaded', init);
+        });
+        
+        document.getElementById('next-page').addEventListener('click', function() {
+            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateTable();
+                updatePagination();
+            }
+        });
+        
+        // 初始加载
+        updateStats();
+        updateRequests();
+        
+        // 定时刷新
+        setInterval(updateStats, 5000);
+        setInterval(updateRequests, 5000);
     </script>
 </body>
 </html>`;
@@ -1961,79 +2076,6 @@ async function handleDashboardRequests(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardStatsSSE(request: Request): Promise<Response> {
-  const headers = new Headers();
-  headers.set("Content-Type", "text/event-stream");
-  headers.set("Cache-Control", "no-cache");
-  headers.set("Connection", "keep-alive");
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  headers.set("Access-Control-Allow-Credentials", "true");
-
-  const body = new ReadableStream({
-    async start(controller) {
-      // 立即发送一次数据
-      controller.enqueue(new TextEncoder().encode(`data: ${getStatsData()}\n\n`));
-      
-      // 每5秒发送一次数据
-      const intervalId = setInterval(() => {
-        try {
-          controller.enqueue(new TextEncoder().encode(`data: ${getStatsData()}\n\n`));
-        } catch (error) {
-          debugLog("SSE stats stream error: %v", error);
-          clearInterval(intervalId);
-          controller.close();
-        }
-      }, 5000);
-      
-      // 清理函数
-      request.signal.addEventListener("abort", () => {
-        clearInterval(intervalId);
-        controller.close();
-      });
-    }
-  });
-  
-  return new Response(body, { headers });
-}
-
-async function handleDashboardRequestsSSE(request: Request): Promise<Response> {
-  const headers = new Headers();
-  headers.set("Content-Type", "text/event-stream");
-  headers.set("Cache-Control", "no-cache");
-  headers.set("Connection", "keep-alive");
-  headers.set("Access-Control-Allow-Origin", "*");
-  headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  headers.set("Access-Control-Allow-Credentials", "true");
-
-  const body = new ReadableStream({
-    async start(controller) {
-      // 立即发送一次数据
-      controller.enqueue(new TextEncoder().encode(`data: ${getLiveRequestsData()}\n\n`));
-      
-      // 每5秒发送一次数据
-      const intervalId = setInterval(() => {
-        try {
-          controller.enqueue(new TextEncoder().encode(`data: ${getLiveRequestsData()}\n\n`));
-        } catch (error) {
-          debugLog("SSE requests stream error: %v", error);
-          clearInterval(intervalId);
-          controller.close();
-        }
-      }, 5000);
-      
-      // 清理函数
-      request.signal.addEventListener("abort", () => {
-        clearInterval(intervalId);
-        controller.close();
-      });
-    }
-  });
-  
-  return new Response(body, { headers });
-}
 
 function getDocsHTML(): string {
 return `<!DOCTYPE html>
@@ -2622,16 +2664,6 @@ try {
     await respondWith(response);
     recordRequestStats(startTime, url.pathname, response.status);
     addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/stats-sse" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardStatsSSE(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/requests-sse" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardRequestsSSE(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
   } else {
     const response = await handleOptions(request);
     await respondWith(response);
@@ -2687,16 +2719,6 @@ async function handleRequest(request: Request): Promise<Response> {
       return response;
     } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
       const response = await handleDashboardRequests(request);
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/dashboard/stats-sse" && DASHBOARD_ENABLED) {
-      const response = await handleDashboardStatsSSE(request);
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/dashboard/requests-sse" && DASHBOARD_ENABLED) {
-      const response = await handleDashboardRequestsSSE(request);
       recordRequestStats(startTime, url.pathname, response.status);
       addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;
