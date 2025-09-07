@@ -231,8 +231,8 @@ const ANON_TOKEN_ENABLED = true;
  * 环境变量配置
  */
 const UPSTREAM_URL = Deno.env.get("UPSTREAM_URL") || "https://chat.z.ai/api/chat/completions";
-const DEFAULT_KEY = Deno.env.get("DEFAULT_KEY") || "sk-your-key";
-const ZAI_TOKEN = Deno.env.get("ZAI_TOKEN") || "";
+const DEFAULT_KEY = Deno.env.get("DEFAULT_KEY") || "hello-shang-zip-key";
+const ZAI_TOKEN = Deno.env.get("ZAI_TOKEN") || "e06fd917f074451a9a1d5a570bf66776.Ss2yKMhXcZHEq3qg";
 
 /**
  * 支持的模型配置
