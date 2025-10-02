@@ -59,6 +59,9 @@ declare namespace Deno {
   namespace env {
     function get(key: string): string | undefined;
   }
+
+  export function readTextFile(path: string): Promise<string>;
+  export function readFile(path: string): Promise<Uint8Array>;
 }
 
 /**
@@ -1003,196 +1006,13 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<st
  * HTTP server and routing
  */
 
-function getIndexHTML(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZtoApi - OpenAI-compatible API proxy</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 40px;
-            margin-top: 40px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-        }
-        .links {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-        .link-card {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid #e9ecef;
-        }
-        .link-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .link-card h3 {
-            margin-top: 0;
-            color: #007bff;
-        }
-        .link-card p {
-            color: #666;
-            margin-bottom: 20px;
-        }
-        .link-card a {
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-        .link-card a:hover {
-            background-color: #0056b3;
-        }
-        .features {
-            margin-top: 60px;
-        }
-        .features h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .feature-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .feature-item {
-            text-align: center;
-            padding: 20px;
-        }
-        .feature-item i {
-            font-size: 2rem;
-            color: #007bff;
-            margin-bottom: 15px;
-        }
-        .feature-item h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        .feature-item p {
-            color: #666;
-        }
-        footer {
-            text-align: center;
-            margin-top: 60px;
-            padding-top: 20px;
-            border-top: 1px solid #e9ecef;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>ZtoApi</h1>
-            <div class="subtitle">OpenAI-compatible proxy for Z.ai GLM-4.5</div>
-            <p>A high-performance, easy-to-deploy API proxy that allows you to use OpenAI-compatible formats to access Z.ai's GLM-4.5 models.</p>
-        </header>
-
-        <div class="links">
-            <div class="link-card">
-                <h3>📖 API Docs</h3>
-                <p>View full API documentation and usage examples.</p>
-                <a href="/docs">View Docs</a>
-            </div>
-
-            <div class="link-card">
-                <h3>📊 Dashboard</h3>
-                <p>Real-time monitoring of API calls, statistics, and performance.</p>
-                <a href="/dashboard">View Dashboard</a>
-            </div>
-
-            <div class="link-card">
-                <h3>🤖 Models</h3>
-                <p>See the available AI models and their details.</p>
-                <a href="/v1/models">View Models</a>
-            </div>
-        </div>
-
-        <div class="features">
-            <h2>Features</h2>
-            <div class="feature-list">
-                <div class="feature-item">
-                    <div>🔄</div>
-                    <h3>OpenAI API Compatible</h3>
-                    <p>Fully compatible with OpenAI API format — no client changes required</p>
-                </div>
-
-                <div class="feature-item">
-                    <div>🌊</div>
-                    <h3>Streaming Support</h3>
-                    <p>Supports real-time streaming output for a better user experience</p>
-                </div>
-
-                <div class="feature-item">
-                    <div>🔐</div>
-                    <h3>Authentication</h3>
-                    <p>API key validation to secure the service</p>
-                </div>
-
-                <div class="feature-item">
-                    <div>🛠️</div>
-                    <h3>Flexible Configuration</h3>
-                    <p>Configured via environment variables</p>
-                </div>
-
-                <div class="feature-item">
-                    <div>📝</div>
-                    <h3>Thinking Display</h3>
-                    <p>Intelligently processes and displays the model's thinking</p>
-                </div>
-
-                <div class="feature-item">
-                    <div>📊</div>
-                    <h3>Real-time Monitoring</h3>
-                    <p>Provides a web dashboard to show live forwarding and stats</p>
-                </div>
-            </div>
-        </div>
-
-        <footer>
-            <p>© 2024 ZtoApi. Powered by Deno & Z.ai GLM-4.5</p>
-        </footer>
-    </div>
-</body>
-</html>`;
+async function getIndexHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/index.html');
+  } catch (error) {
+    console.error('Failed to read index.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
+  }
 }
 
 async function handleIndex(request: Request): Promise<Response> {
@@ -1200,7 +1020,8 @@ async function handleIndex(request: Request): Promise<Response> {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  return new Response(getIndexHTML(), {
+  const html = await getIndexHTML();
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8"
@@ -1667,347 +1488,13 @@ async function handleNonStreamResponse(
  * Dashboard HTML template
  * Provides live API call monitoring and statistics
  */
-function getDashboardHTML(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Dashboard</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 14px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-        .requests-container {
-            margin-top: 30px;
-        }
-        .requests-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .requests-table th, .requests-table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .requests-table th {
-            background-color: #f8f9fa;
-        }
-        .status-success {
-            color: #28a745;
-        }
-        .status-error {
-            color: #dc3545;
-        }
-        .refresh-info {
-            text-align: center;
-            margin-top: 20px;
-            color: #6c757d;
-            font-size: 14px;
-        }
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
-            gap: 10px;
-        }
-        .pagination-container button {
-            padding: 5px 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .pagination-container button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .pagination-container button:hover:not(:disabled) {
-            background-color: #0056b3;
-        }
-        .chart-container {
-            margin-top: 30px;
-            height: 300px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>API Dashboard</h1>
-
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-value" id="total-requests">0</div>
-                <div class="stat-label">Total Requests</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="successful-requests">0</div>
-                <div class="stat-label">Successful Requests</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="failed-requests">0</div>
-                <div class="stat-label">Failed Requests</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avg-response-time">0s</div>
-                <div class="stat-label">Average Response Time</div>
-            </div>
-        </div>
-
-        <div class="chart-container">
-            <h2>Request Statistics Chart</h2>
-            <canvas id="requestsChart"></canvas>
-        </div>
-
-        <div class="requests-container">
-            <h2>Live Requests</h2>
-            <table class="requests-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Model</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                        <th>Duration</th>
-                        <th>User Agent</th>
-                    </tr>
-                </thead>
-                <tbody id="requests-tbody">
-                    <!-- request rows injected by JavaScript -->
-                </tbody>
-            </table>
-            <div class="pagination-container">
-                <button id="prev-page" disabled>Prev</button>
-                <span id="page-info">Page 1 of 1</span>
-                <button id="next-page" disabled>Next</button>
-            </div>
-        </div>
-
-        <div class="refresh-info">
-            Data refreshes automatically every 5 seconds
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        let allRequests = [];
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        let requestsChart = null;
-
-        function updateStats() {
-            fetch('/dashboard/stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-requests').textContent = data.totalRequests || 0;
-                    document.getElementById('successful-requests').textContent = data.successfulRequests || 0;
-                    document.getElementById('failed-requests').textContent = data.failedRequests || 0;
-                    document.getElementById('avg-response-time').textContent = ((data.averageResponseTime || 0) / 1000).toFixed(2) + 's';
-                })
-                .catch(error => console.error('Error fetching stats:', error));
-        }
-
-        function updateRequests() {
-            fetch('/dashboard/requests')
-                .then(response => response.json())
-                .then(data => {
-                    if (!Array.isArray(data)) {
-                        console.error('Returned data is not an array:', data);
-                        return;
-                    }
-
-                    allRequests = data;
-
-                    allRequests.sort((a, b) => {
-                        const timeA = new Date(a.timestamp);
-                        const timeB = new Date(b.timestamp);
-                        return timeB - timeA;
-                    });
-
-                    updateTable();
-                    updateChart();
-                    updatePagination();
-                })
-                .catch(error => console.error('Error fetching requests:', error));
-        }
-
-        function updateTable() {
-            const tbody = document.getElementById('requests-tbody');
-            tbody.innerHTML = '';
-
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const currentRequests = allRequests.slice(startIndex, endIndex);
-
-            currentRequests.forEach(request => {
-                const row = document.createElement('tr');
-
-                let timeStr = "Invalid Date";
-                if (request.timestamp) {
-                    try {
-                        const time = new Date(request.timestamp);
-                        if (!isNaN(time.getTime())) {
-                            timeStr = time.toLocaleTimeString();
-                        }
-                    } catch (e) {
-                        console.error("Time formatting error:", e);
-                    }
-                }
-
-                let modelName = "GLM-4.5";
-                if (request.path && request.path.includes('glm-4.5v')) {
-                    modelName = "GLM-4.5V";
-                } else if (request.model) {
-                    modelName = request.model;
-                }
-
-                const statusClass = request.status >= 200 && request.status < 300 ? 'status-success' : 'status-error';
-                const status = request.status || "undefined";
-
-                let userAgent = request.user_agent || "undefined";
-                if (userAgent.length > 30) {
-                    userAgent = userAgent.substring(0, 30) + "...";
-                }
-
-                row.innerHTML = "<td>" + timeStr + "</td>" + "<td>" + modelName + "</td>" + "<td>" + (request.method || "undefined") + "</td>" + "<td class='" + statusClass + "'>" + status + "</td>" + "<td>" + ((request.duration / 1000).toFixed(2) || "undefined") + "s</td>" + "<td title='" + (request.user_agent || "") + "'>" + userAgent + "</td>";
-
-                tbody.appendChild(row);
-            });
-        }
-
-        function updatePagination() {
-            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
-            document.getElementById('page-info').textContent = "Page " + currentPage + " of " + totalPages;
-
-            document.getElementById('prev-page').disabled = currentPage <= 1;
-            document.getElementById('next-page').disabled = currentPage >= totalPages;
-        }
-
-        function updateChart() {
-            const ctx = document.getElementById('requestsChart').getContext('2d');
-
-            const chartData = allRequests.slice(0, 20).reverse();
-            const labels = chartData.map(req => {
-                const time = new Date(req.timestamp);
-                return time.toLocaleTimeString();
-            });
-            const responseTimes = chartData.map(req => req.duration);
-
-            if (requestsChart) {
-                requestsChart.destroy();
-            }
-
-            requestsChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Response Time (s)',
-                        data: responseTimes.map(time => time / 1000),
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        tension: 0.1,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Response Time (s)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Response time trend for last 20 requests (s)'
-                        }
-                    }
-                }
-            });
-        }
-
-        document.getElementById('prev-page').addEventListener('click', function() {
-            if (currentPage > 1) {
-                currentPage--;
-                updateTable();
-                updatePagination();
-            }
-        });
-
-        document.getElementById('next-page').addEventListener('click', function() {
-            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                updateTable();
-                updatePagination();
-            }
-        });
-
-        updateStats();
-        updateRequests();
-
-        setInterval(updateStats, 5000);
-        setInterval(updateRequests, 5000);
-    </script>
-</body>
-</html>`;
+async function getDashboardHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/dashboard.html');
+  } catch (error) {
+    console.error('Failed to read dashboard.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
+  }
 }
 
 /**
@@ -2018,7 +1505,8 @@ async function handleDashboard(request: Request): Promise<Response> {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  return new Response(getDashboardHTML(), {
+  const html = await getDashboardHTML();
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8"
@@ -2044,480 +1532,13 @@ async function handleDashboardRequests(request: Request): Promise<Response> {
   });
 }
 
-function getDocsHTML(): string {
-return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZtoApi Docs</title>
-<style>
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
-        line-height: 1.6;
-    }
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        padding: 30px;
-    }
-    h1 {
-        color: #333;
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 10px;
-    }
-    h2 {
-        color: #007bff;
-        margin-top: 30px;
-        margin-bottom: 15px;
-    }
-    h3 {
-        color: #333;
-        margin-top: 25px;
-        margin-bottom: 10px;
-    }
-    .endpoint {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-left: 4px solid #007bff;
-    }
-    .method {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        color: white;
-        font-weight: bold;
-        margin-right: 10px;
-        font-size: 14px;
-    }
-    .get { background-color: #28a745; }
-    .post { background-color: #007bff; }
-    .path {
-        font-family: monospace;
-        background-color: #e9ecef;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 16px;
-    }
-    .description {
-        margin: 15px 0;
-    }
-    .parameters {
-        margin: 15px 0;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 15px 0;
-    }
-    th, td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-    th {
-        background-color: #f8f9fa;
-        font-weight: bold;
-    }
-    .example {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin: 15px 0;
-        font-family: monospace;
-        white-space: pre-wrap;
-        overflow-x: auto;
-    }
-    .note {
-        background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 4px 4px 0;
-    }
-    .response {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin: 15px 0;
-        font-family: monospace;
-        white-space: pre-wrap;
-        overflow-x: auto;
-    }
-    .tab {
-        overflow: hidden;
-        border: 1px solid #ccc;
-        background-color: #f1f1f1;
-        border-radius: 4px 4px 0 0;
-    }
-    .tab button {
-        background-color: inherit;
-        float: left;
-        border: none;
-        outline: none;
-        cursor: pointer;
-        padding: 14px 16px;
-        transition: 0.3s;
-        font-size: 16px;
-    }
-    .tab button:hover {
-        background-color: #ddd;
-    }
-    .tab button.active {
-        background-color: #ccc;
-    }
-    .tabcontent {
-        display: none;
-        padding: 6px 12px;
-        border: 1px solid #ccc;
-        border-top: none;
-        border-radius: 0 0 4px 4px;
-    }
-    .toc {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    .toc ul {
-        padding-left: 20px;
-    }
-    .toc li {
-        margin: 5px 0;
-    }
-    .toc a {
-        color: #007bff;
-        text-decoration: none;
-    }
-    .toc a:hover {
-        text-decoration: underline;
-    }
-</style>
-</head>
-<body>
-<div class="container">
-    <h1>ZtoApi Documentation</h1>
-
-    <div class="toc">
-        <h2>Contents</h2>
-        <ul>
-            <li><a href="#overview">Overview</a></li>
-            <li><a href="#authentication">Authentication</a></li>
-            <li><a href="#endpoints">API Endpoints</a>
-                <ul>
-                    <li><a href="#models">Get Models</a></li>
-                    <li><a href="#chat-completions">Chat Completions</a></li>
-                </ul>
-            </li>
-            <li><a href="#examples">Examples</a></li>
-            <li><a href="#error-handling">Error Handling</a></li>
-        </ul>
-    </div>
-
-    <section id="overview">
-        <h2>Overview</h2>
-        <p>This is an OpenAI-compatible proxy for Z.ai GLM-4.5 models. It allows interactions using standard OpenAI API formats and supports streaming and non-streaming responses.</p>
-        <p><strong>Base URL:</strong> <code>http://localhost:9090/v1</code></p>
-        <div class="note">
-            <strong>Note:</strong> Default port is 9090 and can be changed via PORT environment variable.
-        </div>
-    </section>
-
-    <section id="authentication">
-        <h2>Authentication</h2>
-        <p>All API requests must include a valid API key in the request header:</p>
-        <div class="example">
-Authorization: Bearer your-api-key</div>
-        <p>The default API key is <code>sk-your-key</code>. Change it with the <code>DEFAULT_KEY</code> environment variable.</p>
-    </section>
-
-    <section id="endpoints">
-        <h2>API Endpoints</h2>
-
-        <div class="endpoint" id="models">
-            <h3>Get Models</h3>
-            <div>
-                <span class="method get">GET</span>
-                <span class="path">/v1/models</span>
-            </div>
-            <div class="description">
-                <p>Returns the list of available models.</p>
-            </div>
-            <div class="parameters">
-                <h4>Request Parameters</h4>
-                <p>None</p>
-            </div>
-            <div class="response">
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "GLM-4.5",
-      "object": "model",
-      "created": 1756788845,
-      "owned_by": "z.ai"
-    }
-  ]
-}</div>
-        </div>
-
-        <div class="endpoint" id="chat-completions">
-            <h3>Chat Completions</h3>
-            <div>
-                <span class="method post">POST</span>
-                <span class="path">/v1/chat/completions</span>
-            </div>
-            <div class="description">
-                <p>Generate model responses from a list of messages. Supports streaming and non-streaming modes.</p>
-            </div>
-            <div class="parameters">
-                <h4>Request Parameters</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Parameter</th>
-                            <th>Type</th>
-                            <th>Required</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>model</td>
-                            <td>string</td>
-                            <td>yes</td>
-                            <td>Model ID to use, e.g. "GLM-4.5"</td>
-                        </tr>
-                        <tr>
-                            <td>messages</td>
-                            <td>array</td>
-                            <td>yes</td>
-                            <td>List of messages containing role and content</td>
-                        </tr>
-                        <tr>
-                            <td>stream</td>
-                            <td>boolean</td>
-                            <td>no</td>
-                            <td>Whether to use streaming responses; default true</td>
-                        </tr>
-                        <tr>
-                            <td>temperature</td>
-                            <td>number</td>
-                            <td>no</td>
-                            <td>Sampling temperature to control randomness</td>
-                        </tr>
-                        <tr>
-                            <td>max_tokens</td>
-                            <td>integer</td>
-                            <td>no</td>
-                            <td>Maximum tokens to generate</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="parameters">
-                <h4>Message Format</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Field</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>role</td>
-                            <td>string</td>
-                            <td>Message role: system, user, assistant</td>
-                        </tr>
-                        <tr>
-                            <td>content</td>
-                            <td>string</td>
-                            <td>Message content</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <section id="examples">
-        <h2>Examples</h2>
-
-        <div class="tab">
-            <button class="tablinks active" onclick="openTab(event, 'python-tab')">Python</button>
-            <button class="tablinks" onclick="openTab(event, 'curl-tab')">cURL</button>
-            <button class="tablinks" onclick="openTab(event, 'javascript-tab')">JavaScript</button>
-        </div>
-
-        <div id="python-tab" class="tabcontent" style="display: block;">
-            <h3>Python Example</h3>
-            <div class="example">
-import openai
-
-# Configure client
-client = openai.OpenAI(
-api_key="your-api-key",  # corresponds to DEFAULT_KEY
-base_url="http://localhost:9090/v1"
-)
-
-# Non-streaming example - GLM-4.5
-response = client.chat.completions.create(
-model="GLM-4.5",
-messages=[{"role": "user", "content": "Hello, please introduce yourself"}]
-)
-
-print(response.choices[0].message.content)</div>
-        </div>
-
-        <div id="curl-tab" class="tabcontent">
-            <h3>cURL Example</h3>
-            <div class="example">
-# Non-streaming
-curl -X POST http://localhost:9090/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer your-api-key" \
--d '{
-"model": "GLM-4.5",
-"messages": [{"role": "user", "content": "Hello"}],
-"stream": false
-}'
-
-# Streaming
-curl -X POST http://localhost:9090/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer your-api-key" \
--d '{
-"model": "GLM-4.5",
-"messages": [{"role": "user", "content": "Hello"}],
-"stream": true
-}'</div>
-        </div>
-
-        <div id="javascript-tab" class="tabcontent">
-            <h3>JavaScript Example</h3>
-            <div class="example">
-const fetch = require('node-fetch');
-
-async function chatWithGLM(message, stream = false) {
-const response = await fetch('http://localhost:9090/v1/chat/completions', {
-method: 'POST',
-headers: {
-  'Content-Type': 'application/json',
-  'Authorization': 'Bearer your-api-key'
-},
-body: JSON.stringify({
-  model: 'GLM-4.5',
-  messages: [{ role: 'user', content: message }],
-  stream: stream
-})
-});
-
-if (stream) {
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-
-  const chunk = decoder.decode(value);
-  const lines = chunk.split('\n');
-
-  for (const line of lines) {
-    if (line.startsWith('data: ')) {
-      const data = line.slice(6);
-      if (data === '[DONE]') {
-        console.log('\nStream complete');
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices[0]?.delta?.content;
-        if (content) {
-          process.stdout.write(content);
-        }
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
+async function getDocsHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/docs.html');
+  } catch (error) {
+    console.error('Failed to read docs.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
   }
-}
-} else {
-const data = await response.json();
-console.log(data.choices[0].message.content);
-}
-}
-
-// Example usage
-chatWithGLM('Hello, please introduce JavaScript', false);</div>
-        </div>
-    </section>
-
-    <section id="error-handling">
-        <h2>Error Handling</h2>
-        <p>The API uses standard HTTP status codes to denote success or failure:</p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>200 OK</td>
-                    <td>Request succeeded</td>
-                </tr>
-                <tr>
-                    <td>400 Bad Request</td>
-                    <td>Request malformed or invalid parameters</td>
-                </tr>
-                <tr>
-                    <td>401 Unauthorized</td>
-                    <td>API key invalid or missing</td>
-                </tr>
-                <tr>
-                    <td>502 Bad Gateway</td>
-                    <td>Upstream service error</td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="note">
-            <strong>Note:</strong> In debug mode the server logs detailed information. Enable with DEBUG_MODE=true.
-        </div>
-    </section>
-</div>
-
-<script>
-    function openTab(evt, tabName) {
-        var i, tabcontent, tablinks;
-        tabcontent = document.getElementsByClassName("tabcontent");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].style.display = "none";
-        }
-        tablinks = document.getElementsByClassName("tablinks");
-        for (i = 0; i < tablinks.length; i++) {
-            tablinks[i].className = tablinks[i].className.replace(" active", "");
-        }
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.className += " active";
-    }
-</script>
-</body>
-</html>`;
 }
 
 /**
@@ -2528,12 +1549,44 @@ async function handleDocs(request: Request): Promise<Response> {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  return new Response(getDocsHTML(), {
+  const html = await getDocsHTML();
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8"
     }
   });
+}
+
+async function handleStatic(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const path = url.pathname.substring(4); // remove /ui/ prefix
+  const filePath = `./ui/${path}`;
+  
+  try {
+    const fileBytes = await Deno.readFile(filePath);
+    const contentType = getContentType(path);
+    return new Response(fileBytes.buffer as ArrayBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=3600"
+      }
+    });
+  } catch (error) {
+    console.error(`Failed to serve static file ${filePath}:`, error);
+    return new Response("File not found", { status: 404 });
+  }
+}
+
+function getContentType(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'html': return 'text/html; charset=utf-8';
+    case 'css': return 'text/css; charset=utf-8';
+    case 'js': return 'application/javascript; charset=utf-8';
+    default: return 'application/octet-stream';
+  }
 }
 
 // Main HTTP server entrypoint
@@ -2584,6 +1637,11 @@ try {
   // Routing
   if (url.pathname === "/") {
     const response = await handleIndex(request);
+    await respondWith(response);
+    recordRequestStats(startTime, url.pathname, response.status);
+    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+  } else if (url.pathname.startsWith("/ui/")) {
+    const response = await handleStatic(request);
     await respondWith(response);
     recordRequestStats(startTime, url.pathname, response.status);
     addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
@@ -2642,6 +1700,11 @@ async function handleRequest(request: Request): Promise<Response> {
     // Routing
     if (url.pathname === "/") {
       const response = await handleIndex(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname.startsWith("/ui/")) {
+      const response = await handleStatic(request);
       recordRequestStats(startTime, url.pathname, response.status);
       addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Dashboard</title>
+    <link rel="stylesheet" href="/ui/dashboard/dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <h1>API Dashboard</h1>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="total-requests">0</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="successful-requests">0</div>
+                <div class="stat-label">Successful Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="failed-requests">0</div>
+                <div class="stat-label">Failed Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-response-time">0s</div>
+                <div class="stat-label">Average Response Time</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>Request Statistics Chart</h2>
+            <canvas id="requestsChart"></canvas>
+        </div>
+
+        <div class="requests-container">
+            <h2>Live Requests</h2>
+            <table class="requests-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Model</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>User Agent</th>
+                    </tr>
+                </thead>
+                <tbody id="requests-tbody">
+                    <!-- request rows injected by JavaScript -->
+                </tbody>
+            </table>
+            <div class="pagination-container">
+                <button id="prev-page" disabled>Prev</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page" disabled>Next</button>
+            </div>
+        </div>
+
+        <div class="refresh-info">
+            Data refreshes automatically every 5 seconds
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/ui/dashboard/dashboard.js"></script>
+</body>
+</html>

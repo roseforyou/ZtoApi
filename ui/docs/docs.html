@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZtoApi Docs</title>
+    <link rel="stylesheet" href="/ui/docs/docs.css">
+</head>
+<body>
+<div class="container">
+    <h1>ZtoApi Documentation</h1>
+
+    <div class="toc">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#authentication">Authentication</a></li>
+            <li><a href="#endpoints">API Endpoints</a>
+                <ul>
+                    <li><a href="#models">Get Models</a></li>
+                    <li><a href="#chat-completions">Chat Completions</a></li>
+                </ul>
+            </li>
+            <li><a href="#examples">Examples</a></li>
+            <li><a href="#error-handling">Error Handling</a></li>
+        </ul>
+    </div>
+
+    <section id="overview">
+        <h2>Overview</h2>
+        <p>This is an OpenAI-compatible proxy for Z.ai GLM-4.5 models. It allows interactions using standard OpenAI API formats and supports streaming and non-streaming responses.</p>
+        <p><strong>Base URL:</strong> <code>http://localhost:9090/v1</code></p>
+        <div class="note">
+            <strong>Note:</strong> Default port is 9090 and can be changed via PORT environment variable.
+        </div>
+    </section>
+
+    <section id="authentication">
+        <h2>Authentication</h2>
+        <p>All API requests must include a valid API key in the request header:</p>
+        <div class="example">
+Authorization: Bearer your-api-key</div>
+        <p>The default API key is <code>sk-your-key</code>. Change it with the <code>DEFAULT_KEY</code> environment variable.</p>
+    </section>
+
+    <section id="endpoints">
+        <h2>API Endpoints</h2>
+
+        <div class="endpoint" id="models">
+            <h3>Get Models</h3>
+            <div>
+                <span class="method get">GET</span>
+                <span class="path">/v1/models</span>
+            </div>
+            <div class="description">
+                <p>Returns the list of available models.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <p>None</p>
+            </div>
+            <div class="response">{
+  "object": "list",
+  "data": [
+    {
+      "id": "GLM-4.5",
+      "object": "model",
+      "created": 1756788845,
+      "owned_by": "z.ai"
+    }
+  ]
+}</div>
+        </div>
+
+        <div class="endpoint" id="chat-completions">
+            <h3>Chat Completions</h3>
+            <div>
+                <span class="method post">POST</span>
+                <span class="path">/v1/chat/completions</span>
+            </div>
+            <div class="description">
+                <p>Generate model responses from a list of messages. Supports streaming and non-streaming modes.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>model</td>
+                            <td>string</td>
+                            <td>yes</td>
+                            <td>Model ID to use, e.g. "GLM-4.5"</td>
+                        </tr>
+                        <tr>
+                            <td>messages</td>
+                            <td>array</td>
+                            <td>yes</td>
+                            <td>List of messages containing role and content</td>
+                        </tr>
+                        <tr>
+                            <td>stream</td>
+                            <td>boolean</td>
+                            <td>no</td>
+                            <td>Whether to use streaming responses; default true</td>
+                        </tr>
+                        <tr>
+                            <td>temperature</td>
+                            <td>number</td>
+                            <td>no</td>
+                            <td>Sampling temperature to control randomness</td>
+                        </tr>
+                        <tr>
+                            <td>max_tokens</td>
+                            <td>integer</td>
+                            <td>no</td>
+                            <td>Maximum tokens to generate</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="parameters">
+                <h4>Message Format</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>role</td>
+                            <td>string</td>
+                            <td>Message role: system, user, assistant</td>
+                        </tr>
+                        <tr>
+                            <td>content</td>
+                            <td>string</td>
+                            <td>Message content</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="examples">
+        <h2>Examples</h2>
+
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'python-tab')">Python</button>
+            <button class="tablinks" onclick="openTab(event, 'curl-tab')">cURL</button>
+            <button class="tablinks" onclick="openTab(event, 'javascript-tab')">JavaScript</button>
+        </div>
+
+        <div id="python-tab" class="tabcontent" style="display: block;">
+            <h3>Python Example</h3>
+            <div class="example">
+import openai
+
+# Configure client
+client = openai.OpenAI(
+    api_key="your-api-key",  # corresponds to DEFAULT_KEY
+    base_url="http://localhost:9090/v1"
+)
+
+# Non-streaming example - GLM-4.5
+response = client.chat.completions.create(
+    model="GLM-4.5",
+    messages=[{"role": "user", "content": "Hello, please introduce yourself"}]
+)
+
+print(response.choices[0].message.content)</div>
+        </div>
+
+        <div id="curl-tab" class="tabcontent">
+            <h3>cURL Example</h3>
+            <div class="example">
+# Non-streaming
+curl -X POST http://localhost:9090/v1/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer your-api-key" \
+-d '{
+    "model": "GLM-4.5",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "stream": false
+}'
+
+# Streaming
+curl -X POST http://localhost:9090/v1/chat/completions \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer your-api-key" \
+-d '{
+    "model": "GLM-4.5",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "stream": true
+}'</div>
+        </div>
+
+        <div id="javascript-tab" class="tabcontent">
+            <h3>JavaScript Example</h3>
+            <div class="example">
+const fetch = require('node-fetch');
+
+async function chatWithGLM(message, stream = false) {
+    const response = await fetch('http://localhost:9090/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer your-api-key'
+        },
+        body: JSON.stringify({
+            model: 'GLM-4.5',
+            messages: [{ role: 'user', content: message }],
+            stream: stream
+        })
+    });
+
+    if (stream) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') {
+                        console.log('\nStream complete');
+                        return;
+                    }
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.choices[0]?.delta?.content;
+                        if (content) {
+                            process.stdout.write(content);
+                        }
+                    } catch (e) {
+                        // ignore parse errors
+                    }
+                }
+            }
+        }
+    } else {
+        const data = await response.json();
+        console.log(data.choices[0].message.content);
+    }
+}
+
+// Example usage
+chatWithGLM('Hello, please introduce JavaScript', false);</div>
+        </div>
+    </section>
+
+    <section id="error-handling">
+        <h2>Error Handling</h2>
+        <p>The API uses standard HTTP status codes to denote success or failure:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>200 OK</td>
+                    <td>Request succeeded</td>
+                </tr>
+                <tr>
+                    <td>400 Bad Request</td>
+                    <td>Request malformed or invalid parameters</td>
+                </tr>
+                <tr>
+                    <td>401 Unauthorized</td>
+                    <td>API key invalid or missing</td>
+                </tr>
+                <tr>
+                    <td>502 Bad Gateway</td>
+                    <td>Upstream service error</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="note">
+            <strong>Note:</strong> In debug mode the server logs detailed information. Enable with DEBUG_MODE=true.
+        </div>
+    </section>
+</div>
+
+<script src="/ui/docs/docs.js"></script>
+</body>
+</html>
