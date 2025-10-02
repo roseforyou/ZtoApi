@@ -214,7 +214,7 @@ interface Model {
  */
 
 // Thinking content handling mode: "strip" to remove <details>, "think" to convert to <thinking>, "raw" to keep as-is
-const THINK_TAGS_MODE = "strip";
+const THINK_TAGS_MODE = "raw"; // options: "strip", "think", "raw"
 
 // Spoofed front-end headers (observed from capture)
 // Updated to match capture in example.json
@@ -822,10 +822,11 @@ async function processUpstreamStream(
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
   modelName: string
-): Promise<void> {
+): Promise<Usage | null> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let finalUsage: Usage | null = null;
 
   try {
     while (true) {
@@ -882,13 +883,20 @@ async function processUpstreamStream(
 
               await writer.write(encoder.encode(`data: ${JSON.stringify(endChunk)}\n\n`));
               await writer.write(encoder.encode("data: [DONE]\n\n"));
-              return;
+              return finalUsage;
             }
 
             debugLog("Parsed upstream - type: %s, phase: %s, content length: %d, done: %v",
               upstreamData.type, upstreamData.data.phase,
               upstreamData.data.delta_content ? upstreamData.data.delta_content.length : 0,
               upstreamData.data.done);
+
+            // Capture usage information if present
+            if (upstreamData.data.usage) {
+              finalUsage = upstreamData.data.usage;
+              debugLog("Captured usage data: prompt=%d, completion=%d, total=%d",
+                finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+            }
 
             // Handle content
             if (upstreamData.data.delta_content && upstreamData.data.delta_content !== "") {
@@ -921,6 +929,7 @@ async function processUpstreamStream(
             if (upstreamData.data.done || upstreamData.data.phase === "done") {
               debugLog("Detected stream end signal");
 
+              // Send final chunk with usage if available
               const endChunk: OpenAIResponse = {
                 id: `chatcmpl-${Date.now()}`,
                 object: "chat.completion.chunk",
@@ -932,12 +941,13 @@ async function processUpstreamStream(
                     delta: {},
                     finish_reason: "stop"
                   }
-                ]
+                ],
+                usage: finalUsage || undefined
               };
 
               await writer.write(encoder.encode(`data: ${JSON.stringify(endChunk)}\n\n`));
               await writer.write(encoder.encode("data: [DONE]\n\n"));
-              return;
+              return finalUsage;
             }
           } catch (error) {
             debugLog("Failed to parse SSE data: %v", error);
@@ -948,14 +958,17 @@ async function processUpstreamStream(
   } finally {
     writer.close();
   }
+  
+  return finalUsage;
 }
 
 // Collect full response for non-streaming mode
-async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<string> {
+async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<{content: string, usage: Usage | null}> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let fullContent = "";
+  let finalUsage: Usage | null = null;
 
   try {
     while (true) {
@@ -974,6 +987,13 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<st
           try {
             const upstreamData = JSON.parse(dataStr) as UpstreamData;
 
+            // Capture usage information if present
+            if (upstreamData.data.usage) {
+              finalUsage = upstreamData.data.usage;
+              debugLog("Captured usage data in non-streaming: prompt=%d, completion=%d, total=%d",
+                finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+            }
+
             if (upstreamData.data.delta_content !== "") {
               let out = upstreamData.data.delta_content;
               if (upstreamData.data.phase === "thinking") {
@@ -987,7 +1007,7 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<st
 
             if (upstreamData.data.done || upstreamData.data.phase === "done") {
               debugLog("Detected completion signal, stopping collection");
-              return fullContent;
+              return { content: fullContent, usage: finalUsage };
             }
           } catch (error) {
             // ignore parse errors
@@ -999,7 +1019,7 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<st
     reader.releaseLock();
   }
 
-  return fullContent;
+  return { content: fullContent, usage: finalUsage };
 }
 
 /**
@@ -1082,6 +1102,25 @@ async function handleChatCompletions(request: Request): Promise<Response> {
     debugLog("🍒 Detected Cherry Studio client version: %s",
       userAgent.match(/CherryStudio\/([^\s]+)/)?.[1] || 'unknown');
   }
+
+  // Read feature control headers
+  const thinkingHeader = request.headers.get("X-Feature-Thinking");
+  const webSearchHeader = request.headers.get("X-Feature-Web-Search");
+  const autoWebSearchHeader = request.headers.get("X-Feature-Auto-Web-Search");
+  const imageGenerationHeader = request.headers.get("X-Feature-Image-Generation");
+  const titleGenerationHeader = request.headers.get("X-Feature-Title-Generation");
+  const tagsGenerationHeader = request.headers.get("X-Feature-Tags-Generation");
+  const mcpHeader = request.headers.get("X-Feature-MCP");
+
+  // Parse header values to boolean (default to model capabilities if not specified)
+  const parseFeatureHeader = (headerValue: string | null, defaultValue: boolean): boolean => {
+    if (headerValue === null) return defaultValue;
+    const lowerValue = headerValue.toLowerCase().trim();
+    return lowerValue === "true" || lowerValue === "1" || lowerValue === "yes";
+  };
+
+  debugLog("Feature headers received: Thinking=%s, WebSearch=%s, AutoWebSearch=%s, ImageGen=%s, TitleGen=%s, TagsGen=%s, MCP=%s",
+    thinkingHeader, webSearchHeader, autoWebSearchHeader, imageGenerationHeader, titleGenerationHeader, tagsGenerationHeader, mcpHeader);
 
   const headers = new Headers();
   setCORSHeaders(headers);
@@ -1229,17 +1268,17 @@ async function handleChatCompletions(request: Request): Promise<Response> {
     messages: processedMessages,
     params: modelConfig.defaultParams,
     features: {
-      enable_thinking: modelConfig.capabilities.thinking,
-      image_generation: false,
-      web_search: false,
-      auto_web_search: false,
+      enable_thinking: parseFeatureHeader(thinkingHeader, modelConfig.capabilities.thinking),
+      image_generation: parseFeatureHeader(imageGenerationHeader, false),
+      web_search: parseFeatureHeader(webSearchHeader, false),
+      auto_web_search: parseFeatureHeader(autoWebSearchHeader, false),
       preview_mode: modelConfig.capabilities.vision
     },
     background_tasks: {
-      title_generation: false,
-      tags_generation: false
+      title_generation: parseFeatureHeader(titleGenerationHeader, false),
+      tags_generation: parseFeatureHeader(tagsGenerationHeader, false)
     },
-    mcp_servers: modelConfig.capabilities.mcp ? [] : undefined,
+    mcp_servers: (parseFeatureHeader(mcpHeader, modelConfig.capabilities.mcp) && modelConfig.capabilities.mcp) ? [] : undefined,
     model_item: {
       id: modelConfig.upstreamId,
       name: modelConfig.name,
@@ -1375,7 +1414,12 @@ async function handleStreamResponse(
     writer.write(encoder.encode(`data: ${JSON.stringify(firstChunk)}\n\n`));
 
     // Process upstream SSE stream asynchronously
-    processUpstreamStream(response.body, writer, encoder, req.model).catch(error => {
+    processUpstreamStream(response.body, writer, encoder, req.model).then(usage => {
+      if (usage) {
+        debugLog("Stream completed with usage: prompt=%d, completion=%d, total=%d",
+          usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+      }
+    }).catch(error => {
       debugLog("Error while processing upstream stream: %v", error);
     });
 
@@ -1436,8 +1480,13 @@ async function handleNonStreamResponse(
       return new Response("Upstream response body is empty", { status: 502 });
     }
 
-    const finalContent = await collectFullResponse(response.body);
+    const { content: finalContent, usage: finalUsage } = await collectFullResponse(response.body);
     debugLog("Content collection completed, final length: %d", finalContent.length);
+
+    if (finalUsage) {
+      debugLog("Non-stream completed with usage: prompt=%d, completion=%d, total=%d",
+        finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+    }
 
     const openAIResponse: OpenAIResponse = {
       id: `chatcmpl-${Date.now()}`,
@@ -1454,11 +1503,7 @@ async function handleNonStreamResponse(
           finish_reason: "stop"
         }
       ],
-      usage: {
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0
-      }
+      usage: finalUsage || undefined
     };
 
     const duration = Date.now() - startTime;

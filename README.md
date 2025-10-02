@@ -103,6 +103,87 @@ curl -X POST http://localhost:9090/v1/chat/completions \
 
 Base path: http://localhost:9090/v1
 
+## Feature Control Headers
+
+You can control various model features using HTTP headers when making requests to the `/v1/chat/completions` endpoint. These headers override the default model capabilities.
+
+### Available Headers
+
+- `X-Feature-Thinking` — Enable/disable thinking mode (true/false)
+- `X-Feature-Web-Search` — Enable/disable web search (true/false)
+- `X-Feature-Auto-Web-Search` — Enable/disable automatic web search (true/false)
+- `X-Feature-Image-Generation` — Enable/disable image generation (true/false)
+- `X-Feature-Title-Generation` — Enable/disable title generation (true/false)
+- `X-Feature-Tags-Generation` — Enable/disable tags generation (true/false)
+- `X-Feature-MCP` — Enable/disable MCP (Model Context Protocol) tools (true/false)
+
+### Usage Examples
+
+Enable thinking mode:
+```bash
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "X-Feature-Thinking: true" \
+  -d '{"model":"0727-360B-API","messages":[{"role":"user","content":"Explain quantum computing"}],"stream":false}'
+```
+
+Disable thinking mode:
+```bash
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "X-Feature-Thinking: false" \
+  -d '{"model":"0727-360B-API","messages":[{"role":"user","content":"What is 2+2?"}],"stream":false}'
+```
+
+Enable web search:
+```bash
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "X-Feature-Web-Search: true" \
+  -d '{"model":"0727-360B-API","messages":[{"role":"user","content":"What are the latest news about AI?"}],"stream":false}'
+```
+
+Multiple features at once:
+```bash
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "X-Feature-Thinking: true" \
+  -H "X-Feature-Web-Search: true" \
+  -H "X-Feature-MCP: true" \
+  -d '{"model":"0727-360B-API","messages":[{"role":"user","content":"Research and analyze current AI trends"}],"stream":false}'
+```
+
+Python example with headers:
+```python
+from openai import OpenAI
+
+client = OpenAI(api_key="your-api-key", base_url="http://localhost:9090/v1")
+
+response = client.chat.completions.create(
+    model="0727-360B-API",
+    messages=[{"role": "user", "content": "Explain black holes"}],
+    extra_headers={
+        "X-Feature-Thinking": "true",
+        "X-Feature-Web-Search": "false"
+    }
+)
+
+print(response.choices[0].message.content)
+```
+
+### Header Value Format
+
+All feature headers accept the following values (case-insensitive):
+- `"true"` or `"1"` or `"yes"` — Enable the feature
+- `"false"` or `"0"` or `"no"` — Disable the feature
+- If not specified, the feature uses the model's default capability
+
+Note: Some features are model-dependent. For example, MCP tools are only available on models that support them, and web search requires a valid Z.ai API token.
+
 ## Examples
 
 Python (non-streaming)
