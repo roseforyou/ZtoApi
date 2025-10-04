@@ -4,6 +4,8 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+> Guys  i need help fixing the output of the server when thinking enabled, plz, and also a new tag mode to seperate the thinking from the final answer into reasoning_content field at the same level as content.
+
 ZtoApi is a high-performance OpenAI-compatible API proxy that exposes Z.ai's GLM-4.5 and GLM-4.5V models via a standard OpenAI-style interface. Implemented with Deno's native HTTP API, it supports streaming and non-streaming responses and includes a real-time monitoring dashboard.
 
 ## Key Features
