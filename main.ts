@@ -214,7 +214,7 @@ interface Model {
  */
 
 // Thinking content handling mode: "strip" to remove <details>, "think" to convert to <thinking>, "raw" to keep as-is
-const THINK_TAGS_MODE = "raw"; // options: "strip", "think", "raw"
+const THINK_TAGS_MODE = "think"; // options: "strip", "think", "raw"
 
 // Spoofed front-end headers (observed from capture)
 // Updated to match capture in example.json
@@ -792,14 +792,14 @@ async function callUpstreamWithHeaders(
 }
 
 function transformThinking(content: string): string {
-  // Remove <summary>…</summary>
+  // Remove <summary>...</summary>
   let result = content.replace(/<summary>.*?<\/summary>/gs, "");
-  // Clean up custom tags left over like </thinking>, <Full>, etc.
+  // Clean up remaining custom tags, such as </thinking>, <Full>, etc.
   result = result.replace(/<\/thinking>/g, "");
   result = result.replace(/<Full>/g, "");
   result = result.replace(/<\/Full>/g, "");
   result = result.trim();
-
+  
   switch (THINK_TAGS_MODE as "strip" | "think" | "raw") {
     case "think":
       result = result.replace(/<details[^>]*>/g, "<thinking>");
@@ -810,8 +810,8 @@ function transformThinking(content: string): string {
       result = result.replace(/<\/details>/g, "");
       break;
   }
-
-  // Remove "> " line prefix (including at start)
+  
+  // Handle line prefix "> " (including starting position)
   result = result.replace(/^> /, "");
   result = result.replace(/\n> /g, "\n");
   return result.trim();
