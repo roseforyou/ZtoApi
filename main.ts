@@ -115,6 +115,7 @@ interface Message {
     document_url?: {url: string};
     audio_url?: {url: string};
   }>;
+  reasoning_content?: string;
 }
 
 /**
@@ -166,6 +167,7 @@ interface Choice {
 interface Delta {
   role?: string;
   content?: string;
+  reasoning_content?: string;
 }
 
 interface Usage {
@@ -181,6 +183,8 @@ interface UpstreamData {
   type: string;
   data: {
     delta_content: string;
+    edit_content?: string;  // Contains complete thinking block when phase changes
+    edit_index?: number;
     phase: string;
     done: boolean;
     usage?: Usage;
@@ -213,8 +217,12 @@ interface Model {
  * Configuration constants
  */
 
-// Thinking content handling mode: "strip" to remove <details>, "think" to convert to <thinking>, "raw" to keep as-is
-const THINK_TAGS_MODE = "think"; // options: "strip", "think", "raw"
+// Thinking content handling mode:
+// - "strip": remove <details> tags and show only content
+// - "think": convert <details> to <thinking> tags
+// - "raw": keep as-is
+// - "separate": separate reasoning into reasoning_content field
+const THINK_TAGS_MODE = "separate"; // options: "strip", "think", "raw", "separate"
 
 // Spoofed front-end headers (observed from capture)
 // Updated to match capture in example.json
@@ -791,42 +799,140 @@ async function callUpstreamWithHeaders(
   }
 }
 
-function transformThinking(content: string): string {
-  // Remove <summary>...</summary>
-  let result = content.replace(/<summary>.*?<\/summary>/gs, "");
-  // Clean up remaining custom tags, such as </thinking>, <Full>, etc.
-  result = result.replace(/<\/thinking>/g, "");
+/**
+ * Transform thinking content based on specified mode
+ * Returns either a string (for "strip", "think", "raw" modes) or an object with reasoning and content
+ */
+function transformThinking(content: string, mode: "strip" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "think" | "raw" | "separate"): string | { reasoning: string; content: string } {
+
+  // Raw mode: return as-is
+  if (mode === "raw") {
+    return content;
+  }
+
+  // Separate mode: extract reasoning and content separately
+  if (mode === "separate") {
+    let reasoning = "";
+    let finalContent = "";
+
+    // Try standard regex first (for complete <details> tags)
+    let detailsMatch = content.match(/<details[^>]*>(.*?)<\/details>/gs);
+
+    if (detailsMatch) {
+      // Process reasoning content
+      reasoning = detailsMatch.join("\n");
+
+      // Remove <summary>...</summary>
+      reasoning = reasoning.replace(/<summary>.*?<\/summary>/gs, "");
+
+      // Remove <details> tags
+      reasoning = reasoning.replace(/<details[^>]*>/g, "");
+      reasoning = reasoning.replace(/<\/details>/g, "");
+
+      // Handle line prefix "> " (using multiline flag)
+      reasoning = reasoning.replace(/^> /gm, "");
+
+      reasoning = reasoning.trim();
+
+      // Extract final content (everything outside <details> tags)
+      finalContent = content.replace(/<details[^>]*>.*?<\/details>/gs, "").trim();
+    } else if (content.includes("</details>")) {
+      // Handle partial edit_content (starts mid-tag)
+      // Split by </details> to separate reasoning from content
+      const parts = content.split("</details>");
+
+      reasoning = parts[0];
+      finalContent = parts.slice(1).join("</details>").trim();
+
+      // Remove <summary>...</summary>
+      reasoning = reasoning.replace(/<summary>.*?<\/summary>/gs, "");
+
+      // Remove any partial opening tags at the start (e.g., 'true" duration="5"...')
+      reasoning = reasoning.replace(/^[^>]*>/, "");
+
+      // Handle line prefix "> "
+      reasoning = reasoning.replace(/^> /gm, "");
+
+      reasoning = reasoning.trim();
+
+      debugLog("Separate mode - extracted reasoning length: %d, content length: %d", reasoning.length, finalContent.length);
+      debugLog("Separate mode - content preview: %s", finalContent.substring(0, 50));
+    } else {
+      // No details tags, treat all as final content
+      finalContent = content;
+    }
+
+    return { reasoning, content: finalContent };
+  }
+
+  // For "strip" and "think" modes, process as string
+  let result = content;
+
+  // Handle complete <details> tags first
+  if (content.match(/<details[^>]*>.*?<\/details>/gs)) {
+    switch (mode) {
+      case "think":
+        // Convert <details> to <thinking>, preserve content structure
+        result = result.replace(/<details[^>]*>/g, "<thinking>");
+        result = result.replace(/<\/details>/g, "</thinking>");
+        break;
+      case "strip":
+        // Remove <details> tags but keep content
+        result = result.replace(/<details[^>]*>/g, "");
+        result = result.replace(/<\/details>/g, "");
+        break;
+    }
+  } else if (content.includes("</details>")) {
+    // Handle partial edit_content
+    const parts = content.split("</details>");
+    let thinkingPart = parts[0];
+    const contentPart = parts.slice(1).join("</details>");
+
+    // Remove partial opening tag
+    thinkingPart = thinkingPart.replace(/^[^>]*>/, "");
+
+    switch (mode) {
+      case "think":
+        result = "<thinking>" + thinkingPart + "</thinking>" + contentPart;
+        break;
+      case "strip":
+        result = thinkingPart + contentPart;
+        break;
+    }
+  }
+
+  // Remove <summary>...</summary> tags
+  result = result.replace(/<summary>.*?<\/summary>/gs, "");
+
+  // Clean up other custom tags
   result = result.replace(/<Full>/g, "");
   result = result.replace(/<\/Full>/g, "");
+
+  // Handle line prefix "> " (using multiline flag for proper matching)
+  result = result.replace(/^> /gm, "");
+
+  // Clean up extra whitespace but preserve paragraph structure
+  result = result.replace(/\n\s*\n\s*\n/g, "\n\n"); // Multiple newlines to double newlines
   result = result.trim();
-  
-  switch (THINK_TAGS_MODE as "strip" | "think" | "raw") {
-    case "think":
-      result = result.replace(/<details[^>]*>/g, "<thinking>");
-      result = result.replace(/<\/details>/g, "</thinking>");
-      break;
-    case "strip":
-      result = result.replace(/<details[^>]*>/g, "");
-      result = result.replace(/<\/details>/g, "");
-      break;
-  }
-  
-  // Handle line prefix "> " (including starting position)
-  result = result.replace(/^> /, "");
-  result = result.replace(/\n> /g, "\n");
-  return result.trim();
+
+  return result;
 }
 
 async function processUpstreamStream(
   body: ReadableStream<Uint8Array>,
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
-  modelName: string
+  modelName: string,
+  thinkTagsMode: "strip" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "think" | "raw" | "separate"
 ): Promise<Usage | null> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let finalUsage: Usage | null = null;
+
+  // For "separate" mode, accumulate thinking content
+  let accumulatedThinking = "";
+  let thinkingSent = false;
 
   try {
     while (true) {
@@ -898,30 +1004,176 @@ async function processUpstreamStream(
                 finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
             }
 
+            // Handle edit_content (complete thinking block sent when phase changes)
+            if (upstreamData.data.edit_content && !thinkingSent) {
+              debugLog("Received edit_content with complete thinking block, length: %d", upstreamData.data.edit_content.length);
+              debugLog("Current mode: %s, thinkingSent: %s", THINK_TAGS_MODE, thinkingSent);
+
+              if (thinkTagsMode === "separate") {
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                if (typeof transformed === "object" && transformed.reasoning) {
+                  debugLog("Sending reasoning from edit_content, length: %d", transformed.reasoning.length);
+
+                  // Send reasoning as a separate field
+                  const reasoningChunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { reasoning_content: transformed.reasoning }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(reasoningChunk)}\n\n`));
+                  thinkingSent = true;
+                }
+              } else {
+                // For other modes, process the complete thinking block from edit_content
+                debugLog("Processing complete thinking block from edit_content for mode: %s", THINK_TAGS_MODE);
+
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                if (processedContent && processedContent.trim() !== "") {
+                  debugLog("Sending processed thinking content from edit_content, length: %d", processedContent.length);
+
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: processedContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                  thinkingSent = true;
+                } else {
+                  debugLog("Processed thinking content from edit_content is empty");
+                }
+              }
+            }
+
             // Handle content
             if (upstreamData.data.delta_content && upstreamData.data.delta_content !== "") {
-              let out = upstreamData.data.delta_content;
-              if (upstreamData.data.phase === "thinking") {
-                out = transformThinking(out);
-              }
+              const rawContent = upstreamData.data.delta_content;
+              const isThinking = upstreamData.data.phase === "thinking";
 
-              if (out !== "") {
-                debugLog("Sending content(%s): %s", upstreamData.data.phase, out);
+              if (thinkTagsMode === "separate") {
+                // In separate mode, accumulate thinking content
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
 
-                const chunk: OpenAIResponse = {
-                  id: `chatcmpl-${Date.now()}`,
-                  object: "chat.completion.chunk",
-                  created: Math.floor(Date.now() / 1000),
-                  model: modelName,
-                  choices: [
-                    {
-                      index: 0,
-                      delta: { content: out }
+                  // Check if thinking block is complete (contains closing </details>)
+                  if (accumulatedThinking.includes("</details>") && !thinkingSent) {
+                    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                    if (typeof transformed === "object" && transformed.reasoning) {
+                      debugLog("Sending accumulated reasoning content, length: %d", transformed.reasoning.length);
+
+                      // Send reasoning as a separate field
+                      const reasoningChunk: OpenAIResponse = {
+                        id: `chatcmpl-${Date.now()}`,
+                        object: "chat.completion.chunk",
+                        created: Math.floor(Date.now() / 1000),
+                        model: modelName,
+                        choices: [
+                          {
+                            index: 0,
+                            delta: { reasoning_content: transformed.reasoning }
+                          }
+                        ]
+                      };
+
+                      await writer.write(encoder.encode(`data: ${JSON.stringify(reasoningChunk)}\n\n`));
+                      thinkingSent = true;
                     }
-                  ]
-                };
+                  }
+                } else {
+                  // Regular content
+                  debugLog("Sending regular content: %s", rawContent);
 
-                await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: rawContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                }
+              } else {
+                // Other modes: accumulate thinking content and process when complete
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
+                  debugLog("Accumulated thinking content, total length: %d", accumulatedThinking.length);
+
+                  // Check if thinking block is complete (contains closing </details>)
+                  if (accumulatedThinking.includes("</details>") && !thinkingSent) {
+                    debugLog("Processing complete thinking block, length: %d", accumulatedThinking.length);
+                    debugLog("Thinking content preview: %s", accumulatedThinking.substring(0, 200));
+
+                    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                    const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                    if (processedContent && processedContent.trim() !== "") {
+                      debugLog("Sending processed thinking content, length: %d", processedContent.length);
+
+                      const chunk: OpenAIResponse = {
+                        id: `chatcmpl-${Date.now()}`,
+                        object: "chat.completion.chunk",
+                        created: Math.floor(Date.now() / 1000),
+                        model: modelName,
+                        choices: [
+                          {
+                            index: 0,
+                            delta: { content: processedContent }
+                          }
+                        ]
+                      };
+
+                      await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                      thinkingSent = true;
+                    } else {
+                      debugLog("Processed thinking content is empty or whitespace-only");
+                    }
+                  } else {
+                    debugLog("Thinking block not complete yet, contains </details>: %s, thinkingSent: %s",
+                      accumulatedThinking.includes("</details>"), thinkingSent);
+                  }
+                  // Don't send individual thinking chunks - wait for complete block
+                } else {
+                  // Regular content (non-thinking)
+                  debugLog("Sending regular content: %s", rawContent);
+
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: rawContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                }
               }
             }
 
@@ -963,11 +1215,16 @@ async function processUpstreamStream(
 }
 
 // Collect full response for non-streaming mode
-async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<{content: string, usage: Usage | null}> {
+async function collectFullResponse(
+  body: ReadableStream<Uint8Array>,
+  thinkTagsMode: "strip" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "think" | "raw" | "separate"
+): Promise<{content: string, reasoning_content?: string, usage: Usage | null}> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let fullContent = "";
+  let fullReasoning = "";
+  let accumulatedThinking = "";
   let finalUsage: Usage | null = null;
 
   try {
@@ -994,20 +1251,77 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<{c
                 finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
             }
 
-            if (upstreamData.data.delta_content !== "") {
-              let out = upstreamData.data.delta_content;
-              if (upstreamData.data.phase === "thinking") {
-                out = transformThinking(out);
-              }
+            // Handle edit_content (complete thinking block)
+            if (upstreamData.data.edit_content) {
+              debugLog("Received edit_content in non-streaming, length: %d", upstreamData.data.edit_content.length);
 
-              if (out !== "") {
-                fullContent += out;
+              if (thinkTagsMode === "separate") {
+                // For separate mode, extract reasoning and content separately
+                if (!fullReasoning) {
+                  const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                  if (typeof transformed === "object") {
+                    fullReasoning = transformed.reasoning;
+                    debugLog("Extracted reasoning from edit_content, length: %d", fullReasoning.length);
+
+                    // Also add the content part from edit_content to fullContent
+                    if (transformed.content && transformed.content.trim() !== "") {
+                      fullContent += transformed.content;
+                      debugLog("Added content part from edit_content, length: %d", transformed.content.length);
+                    }
+                  }
+                }
+              } else {
+                // For other modes, process the thinking content and add to fullContent
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                if (processedContent && processedContent.trim() !== "") {
+                  fullContent += processedContent;
+                  debugLog("Added processed edit_content to fullContent, length: %d", processedContent.length);
+                }
+              }
+            }
+
+            if (upstreamData.data.delta_content !== "") {
+              const rawContent = upstreamData.data.delta_content;
+              const isThinking = upstreamData.data.phase === "thinking";
+
+              if (thinkTagsMode === "separate") {
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
+                } else {
+                  fullContent += rawContent;
+                }
+              } else {
+                // For non-separate modes, only process non-thinking content
+                // Thinking content is handled by edit_content
+                if (!isThinking) {
+                  fullContent += rawContent;
+                }
               }
             }
 
             if (upstreamData.data.done || upstreamData.data.phase === "done") {
               debugLog("Detected completion signal, stopping collection");
-              return { content: fullContent, usage: finalUsage };
+
+
+              // Process accumulated thinking if in separate mode (only if not already set from edit_content)
+              if (thinkTagsMode === "separate" && accumulatedThinking && !fullReasoning) {
+                const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                if (typeof transformed === "object") {
+                  fullReasoning = transformed.reasoning;
+                  debugLog("Set fullReasoning from accumulated thinking, length: %d", fullReasoning.length);
+                }
+              }
+
+              debugLog("collectFullResponse early return - content length: %d, reasoning length: %d",
+                fullContent.length, fullReasoning ? fullReasoning.length : 0);
+
+              return {
+                content: fullContent,
+                reasoning_content: fullReasoning || undefined,
+                usage: finalUsage
+              };
             }
           } catch (error) {
             // ignore parse errors
@@ -1019,7 +1333,22 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<{c
     reader.releaseLock();
   }
 
-  return { content: fullContent, usage: finalUsage };
+  // Process accumulated thinking if in separate mode
+  if (thinkTagsMode === "separate" && accumulatedThinking) {
+    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+    if (typeof transformed === "object") {
+      fullReasoning = transformed.reasoning;
+    }
+  }
+
+  debugLog("collectFullResponse returning - content length: %d, reasoning length: %d",
+    fullContent.length, fullReasoning ? fullReasoning.length : 0);
+
+  return {
+    content: fullContent,
+    reasoning_content: fullReasoning || undefined,
+    usage: finalUsage
+  };
 }
 
 /**
@@ -1111,6 +1440,9 @@ async function handleChatCompletions(request: Request): Promise<Response> {
   const titleGenerationHeader = request.headers.get("X-Feature-Title-Generation");
   const tagsGenerationHeader = request.headers.get("X-Feature-Tags-Generation");
   const mcpHeader = request.headers.get("X-Feature-MCP");
+  
+  // Read think tags mode customization header
+  const thinkTagsModeHeader = request.headers.get("X-Think-Tags-Mode");
 
   // Parse header values to boolean (default to model capabilities if not specified)
   const parseFeatureHeader = (headerValue: string | null, defaultValue: boolean): boolean => {
@@ -1119,8 +1451,26 @@ async function handleChatCompletions(request: Request): Promise<Response> {
     return lowerValue === "true" || lowerValue === "1" || lowerValue === "yes";
   };
 
+  // Parse think tags mode header with validation
+  const parseThinkTagsMode = (headerValue: string | null): "strip" | "think" | "raw" | "separate" => {
+    if (headerValue === null) return THINK_TAGS_MODE as "strip" | "think" | "raw" | "separate";
+    
+    const validModes = ["strip", "think", "raw", "separate"];
+    const normalizedValue = headerValue.toLowerCase().trim();
+    
+    if (validModes.includes(normalizedValue)) {
+      return normalizedValue as "strip" | "think" | "raw" | "separate";
+    }
+    
+    debugLog("⚠️ Invalid X-Think-Tags-Mode value: %s. Using default: %s", headerValue, THINK_TAGS_MODE);
+    return THINK_TAGS_MODE as "strip" | "think" | "raw" | "separate";
+  };
+
+  const currentThinkTagsMode = parseThinkTagsMode(thinkTagsModeHeader);
+
   debugLog("Feature headers received: Thinking=%s, WebSearch=%s, AutoWebSearch=%s, ImageGen=%s, TitleGen=%s, TagsGen=%s, MCP=%s",
     thinkingHeader, webSearchHeader, autoWebSearchHeader, imageGenerationHeader, titleGenerationHeader, tagsGenerationHeader, mcpHeader);
+  debugLog("🎯 Think tags mode: %s (header: %s, default: %s)", currentThinkTagsMode, thinkTagsModeHeader || "not provided", THINK_TAGS_MODE);
 
   const headers = new Headers();
   setCORSHeaders(headers);
@@ -1346,9 +1696,9 @@ async function handleChatCompletions(request: Request): Promise<Response> {
   // Call upstream
   try {
     if (req.stream) {
-      return await handleStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig);
+      return await handleStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig, currentThinkTagsMode);
     } else {
-      return await handleNonStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig);
+      return await handleNonStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig, currentThinkTagsMode);
     }
   } catch (error) {
     debugLog("Upstream call failed: %v", error);
@@ -1370,7 +1720,8 @@ async function handleStreamResponse(
   path: string,
   userAgent: string,
   req: OpenAIRequest,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  thinkTagsMode: "strip" | "think" | "raw" | "separate"
 ): Promise<Response> {
   debugLog("Starting to handle stream response (chat_id=%s)", chatID);
 
@@ -1414,7 +1765,7 @@ async function handleStreamResponse(
     writer.write(encoder.encode(`data: ${JSON.stringify(firstChunk)}\n\n`));
 
     // Process upstream SSE stream asynchronously
-    processUpstreamStream(response.body, writer, encoder, req.model).then(usage => {
+    processUpstreamStream(response.body, writer, encoder, req.model, thinkTagsMode).then(usage => {
       if (usage) {
         debugLog("Stream completed with usage: prompt=%d, completion=%d, total=%d",
           usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
@@ -1457,7 +1808,8 @@ async function handleNonStreamResponse(
   path: string,
   userAgent: string,
   req: OpenAIRequest,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  thinkTagsMode: "strip" | "think" | "raw" | "separate"
 ): Promise<Response> {
   debugLog("Starting to handle non-stream response (chat_id=%s)", chatID);
 
@@ -1480,12 +1832,28 @@ async function handleNonStreamResponse(
       return new Response("Upstream response body is empty", { status: 502 });
     }
 
-    const { content: finalContent, usage: finalUsage } = await collectFullResponse(response.body);
+    const { content: finalContent, reasoning_content: reasoningContent, usage: finalUsage } = await collectFullResponse(response.body, thinkTagsMode);
     debugLog("Content collection completed, final length: %d", finalContent.length);
+    debugLog("Reasoning content status: %s", reasoningContent ? `present (${reasoningContent.length} chars)` : "not present");
+
+    if (reasoningContent) {
+      debugLog("Reasoning content collected, length: %d", reasoningContent.length);
+      debugLog("Reasoning content preview: %s", reasoningContent.substring(0, 100));
+    }
 
     if (finalUsage) {
       debugLog("Non-stream completed with usage: prompt=%d, completion=%d, total=%d",
         finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+    }
+
+    const message: Message = {
+      role: "assistant",
+      content: finalContent
+    };
+
+    // Add reasoning_content if available
+    if (reasoningContent) {
+      message.reasoning_content = reasoningContent;
     }
 
     const openAIResponse: OpenAIResponse = {
@@ -1496,10 +1864,7 @@ async function handleNonStreamResponse(
       choices: [
         {
           index: 0,
-          message: {
-            role: "assistant",
-            content: finalContent
-          },
+          message: message,
           finish_reason: "stop"
         }
       ],
