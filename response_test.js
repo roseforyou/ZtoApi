@@ -259,7 +259,7 @@ async function testDifferentThinkingModes() {
     console.log('\n🧪 TEST 3: Different Thinking Modes Comparison');
     console.log('=' .repeat(60));
     
-    const modes = ['strip', 'think', 'raw', 'separate'];
+    const modes = ['strip', 'thinking', 'raw', 'separate'];
     
     for (const mode of modes) {
         console.log(`\n🔧 Testing mode: ${mode}`);

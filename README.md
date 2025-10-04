@@ -16,7 +16,7 @@ Hey there! 👋 Welcome to ZtoApi - your super cool, high-performance OpenAI-com
 - 🌊 **SSE streaming support** for real-time token delivery - watch the magic happen! ✨
 - 🧠 **Advanced thinking content processing** with 4 amazing modes:
   - `"strip"` - Remove thinking tags, show only clean content 🧹
-  - `"think"` - Convert `<details>` to `<thinking>` tags 💭
+  - `"thinking"` - Convert `<details>` to `<thinking>` tags 💭
   - `"raw"` - Keep original `<details>` tags as-is 📄
   - `"separate"` - Extract thinking into separate `reasoning_content` field 📊
 - 📊 **Built-in web Dashboard** with live request stats - monitor your API in style! 🎨
@@ -211,7 +211,7 @@ The `X-Think-Tags-Mode` header allows you to customize how thinking content is p
 #### Available Modes
 
 - `"strip"` - Remove `<details>` tags and show only the final content 🧹
-- `"think"` - Convert `<details>` tags to `<thinking>` tags 💭
+- `"thinking"` - Convert `<details>` tags to `<thinking>` tags 💭
 - `"raw"` - Keep the content exactly as-is from the upstream 📄
 - `"separate"` - Separate reasoning into `reasoning_content` field (default) 📊
 
@@ -280,7 +280,7 @@ print("Reasoning:", response.choices[0].message.reasoning_content)
 
 - **🔄 Per-Request Control**: Switch between modes without server restart
 - **🎯 Use-Case Specific**: Choose the perfect format for your application
-- **🐛 Debugging Friendly**: Use "think" or "raw" modes to see the model's reasoning
+- **🐛 Debugging Friendly**: Use "thinking" or "raw" modes to see the model's reasoning
 - **🧹 Clean Output**: Use "strip" mode for production-ready responses
 - **📊 Structured Data**: Use "separate" mode for educational tools or analytics
 
@@ -330,7 +330,7 @@ curl -X POST http://localhost:9090/v1/chat/completions \
 Set the default mode by modifying the `THINK_TAGS_MODE` constant in `main.ts`:
 
 ```typescript
-const THINK_TAGS_MODE = "separate"; // options: "strip", "think", "raw", "separate"
+const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "separate"
 ```
 
 **Note**: The `X-Think-Tags-Mode` header always overrides the server default! 🔄
@@ -349,7 +349,7 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "think", "raw", "separa
    }
    ```
 
-2. **`"think"`** - Converts `<details>` tags to `<thinking>` tags for better readability 💭
+2. **`"thinking"`** - Converts `<details>` tags to `<thinking>` tags for better readability 💭
    ```json
    {
      "choices": [{
@@ -389,7 +389,7 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "think", "raw", "separa
 ### Use Case Recommendations
 
 - **🧹 Production Apps**: Use `"strip"` for clean, user-friendly responses
-- **🐛 Debugging**: Use `"think"` or `"raw"` to see the model's reasoning process
+- **🐛 Debugging**: Use `"thinking"` or `"raw"` to see the model's reasoning process
 - **📚 Educational Tools**: Use `"separate"` to display reasoning and answers separately
 - **🔍 Advanced Processing**: Use `"raw"` for custom parsing and analysis
 

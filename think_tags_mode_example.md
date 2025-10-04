@@ -5,7 +5,7 @@ The `X-Think-Tags-Mode` header allows you to customize how thinking content is p
 ## Available Modes
 
 - **"strip"** - Remove `<details>` tags and show only the final content
-- **"think"** - Convert `<details>` tags to `<thinking>` tags 
+- **"thinking"** - Convert `<details>` tags to `<thinking>` tags
 - **"raw"** - Keep the content exactly as-is from the upstream
 - **"separate"** - Separate reasoning into `reasoning_content` field (default)
 
@@ -112,7 +112,7 @@ curl -X POST "http://localhost:9090/v1/chat/completions" \
 
 - **Flexibility**: Choose the best format for your use case
 - **Compatibility**: Works with both streaming and non-streaming requests
-- **Debugging**: Use "raw" or "think" modes to see the model's reasoning process
+- **Debugging**: Use "raw" or "thinking" modes to see the model's reasoning process
 - **Clean Output**: Use "strip" mode for clean, final responses
 - **Structured Data**: Use "separate" mode to keep reasoning and content separate
 
