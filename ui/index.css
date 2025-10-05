@@ -163,9 +163,9 @@ body.loaded {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 9999;
   background: var(--bg-glass);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: 50px;
   width: 50px;
@@ -180,8 +180,9 @@ body.loaded {
 }
 
 .theme-toggle:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 25px var(--shadow-medium);
+  transform: scale(1.1);
+  box-shadow: 0 6px 25px var(--shadow-strong), 0 0 20px var(--glow-color);
+  border-color: var(--accent-primary);
 }
 
 .sun-icon, .moon-icon {
@@ -251,6 +252,18 @@ body.loaded {
   100% {
     transform: scale(1);
     opacity: 0.5;
+  }
+}
+
+@keyframes subtle-bob {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0px);
   }
 }
 
@@ -440,8 +453,8 @@ body.loaded {
 }
 
 .link-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 40px 30px;
@@ -450,7 +463,8 @@ body.loaded {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  transform-style: preserve-3d;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  animation: subtle-bob 3s ease-in-out infinite;
 }
 
 .link-card::before {
@@ -470,9 +484,10 @@ body.loaded {
 }
 
 .link-card:hover {
-  transform: translateY(-10px) rotateX(5deg);
-  box-shadow: 0 20px 40px var(--shadow-medium);
+  transform: translateY(-15px) scale(1.03);
+  box-shadow: 0 0 40px var(--glow-color), 0 15px 30px var(--shadow-strong);
   border-color: var(--accent-primary);
+  animation-play-state: paused;
 }
 
 .card-icon {
@@ -581,13 +596,14 @@ body.loaded {
 .feature-item {
   text-align: center;
   padding: 40px 30px;
-  background: var(--card-bg);
-  backdrop-filter: blur(20px);
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .feature-item::before {
@@ -607,8 +623,8 @@ body.loaded {
 }
 
 .feature-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px var(--shadow-medium);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 0 30px var(--glow-color), 0 10px 20px var(--shadow-strong);
   border-color: var(--accent-primary);
 }
 
