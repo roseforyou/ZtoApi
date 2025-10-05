@@ -1,22 +1,22 @@
 /* CSS Variables for Light and Dark Mode */
 :root {
   /* Light Mode Colors */
-  --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-primary: #ffffff;
   --bg-secondary: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.25);
-  --bg-overlay: rgba(255, 255, 255, 0.9);
+  --bg-glass: rgba(241, 245, 249, 0.95);
+  --bg-overlay: rgba(241, 245, 249, 0.98);
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --text-accent: #3b82f6;
-  --accent-primary: #667eea;
-  --accent-secondary: #764ba2;
-  --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --border-color: rgba(255, 255, 255, 0.3);
-  --shadow-light: rgba(0, 0, 0, 0.1);
-  --shadow-medium: rgba(0, 0, 0, 0.15);
-  --shadow-strong: rgba(0, 0, 0, 0.25);
-  --glow-color: rgba(102, 126, 234, 0.6);
-  --card-bg: rgba(255, 255, 255, 0.9);
+  --accent-primary: #3b82f6;
+  --accent-secondary: #8b5cf6;
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --border-color: rgba(148, 163, 184, 0.6);
+  --shadow-light: rgba(0, 0, 0, 0.08);
+  --shadow-medium: rgba(0, 0, 0, 0.12);
+  --shadow-strong: rgba(0, 0, 0, 0.2);
+  --glow-color: rgba(59, 130, 246, 0.15);
+  --card-bg: rgba(241, 245, 249, 0.9);
 }
 
 /* Dark Mode Colors */
@@ -94,8 +94,8 @@ body.loaded {
   content: '';
   position: absolute;
   border-radius: 50%;
-  background: var(--accent-gradient);
-  opacity: 0.05;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  opacity: 0.3;
   animation: float 20s infinite ease-in-out;
 }
 
@@ -125,11 +125,11 @@ body.loaded {
   position: absolute;
   width: 300px;
   height: 300px;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
   border-radius: 50%;
   top: 10%;
   left: 10%;
-  opacity: 0.05;
+  opacity: 0.2;
   animation: float 15s infinite ease-in-out;
 }
 
@@ -138,11 +138,11 @@ body.loaded {
   position: absolute;
   width: 200px;
   height: 200px;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
   border-radius: 50%;
   bottom: 10%;
   right: 10%;
-  opacity: 0.05;
+  opacity: 0.25;
   animation: float 18s infinite ease-in-out reverse;
 }
 
@@ -459,13 +459,12 @@ body.loaded {
   border-radius: 20px;
   padding: 40px 30px;
   text-align: center;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
   cursor: pointer;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-  animation: subtle-bob 3s ease-in-out infinite;
   transform-style: preserve-3d;
+  transform-origin: center center;
 }
 
 .link-card::before {
@@ -484,12 +483,6 @@ body.loaded {
   transform: scaleX(1);
 }
 
-.link-card:hover {
-  transform: translateY(-15px) scale(1.03) rotateX(5deg);
-  box-shadow: 0 0 40px var(--glow-color), 0 15px 30px var(--shadow-strong);
-  border-color: var(--accent-primary);
-  animation-play-state: paused;
-}
 
 .card-icon {
   font-size: 3rem;
@@ -536,6 +529,9 @@ body.loaded {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  transform-style: preserve-3d;
+  transform: translateZ(10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-color);
 }
 
 .card-link::before {
@@ -547,15 +543,37 @@ body.loaded {
   height: 100%;
   background: rgba(255, 255, 255, 0.2);
   transition: left 0.3s ease;
+  border-radius: 25px;
 }
 
 .card-link:hover::before {
   left: 100%;
 }
 
+/* Add a 3D button face effect */
+.card-link::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 50%, rgba(0, 0, 0, 0.1) 100%);
+  border-radius: 25px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Button text depth */
+.card-link span {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 .card-link:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 25px var(--shadow-medium);
+  transform: translateZ(20px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 30px var(--glow-color), 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .link-arrow {
@@ -579,7 +597,31 @@ body.loaded {
 }
 
 .link-card:hover .card-glow {
-  opacity: 0.1;
+  opacity: 0.15;
+}
+
+/* Enhanced 3D effect elements */
+.card-shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 55%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+  pointer-events: none;
+}
+
+.link-card:hover .card-shine {
+  transform: translateX(100%);
 }
 
 /* Features Section */
