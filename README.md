@@ -24,6 +24,7 @@ ZtoApi 支持 Z.ai 的多个先进 AI 模型：
 | 模型ID | 模型名称 | 特性 |
 |---------|----------|------|
 | 0727-360B-API | GLM-4.5 | 通用对话、代码生成、工具调用 |
+| glm-4.6 | GLM-4.6 | 🚀 最新增强模型，具备更强的推理和代码能力 |
 | glm-4.5v | GLM-4.5V | 🎯 全方位多模态理解：图像、视频、文档、音频 |
 
 ### 模型特性对比
@@ -32,6 +33,12 @@ ZtoApi 支持 Z.ai 的多个先进 AI 模型：
 - ✅ 思考过程展示
 - ✅ MCP 工具调用
 - ✅ 代码生成与分析
+- ❌ 多模态理解
+
+**GLM-4.6** (`glm-4.6`)
+- ✅ 🚀 更强的思考过程展示
+- ✅ 🚀 增强的MCP工具调用
+- ✅ 🚀 顶级的代码生成与分析
 - ❌ 多模态理解
 
 **GLM-4.5V** (`glm-4.5v`) - 全方位多模态理解
@@ -327,6 +334,13 @@ response = client.chat.completions.create(
 )
 print(response.choices[0].message.content)
 
+# 使用 GLM-4.6 进行增强对话
+response = client.chat.completions.create(
+    model="glm-4.6",
+    messages=[{"role": "user", "content": "用Python写一个快速排序算法"}]
+)
+print(response.choices[0].message.content)
+
 # 使用 GLM-4.5V 进行全方位多模态理解
 
 # 1. 图像分析
@@ -415,6 +429,16 @@ curl -X POST https://your-project.deno.dev/v1/chat/completions \
   -d '{
     "model": "0727-360B-API",
     "messages": [{"role": "user", "content": "你好"}],
+    "stream": false
+  }'
+
+# 使用 GLM-4.6 进行增强对话
+curl -X POST https://your-project.deno.dev/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "glm-4.6",
+    "messages": [{"role": "user", "content": "用Python写一个快速排序算法"}],
     "stream": false
   }'
 

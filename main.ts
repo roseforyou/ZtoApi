@@ -3,7 +3,7 @@
  * ZtoApi - OpenAI兼容API代理服务器
  * 
  * 功能概述：
- * - 为 Z.ai 的 GLM-4.5 模型提供 OpenAI 兼容的 API 接口
+ * - 为 Z.ai 的 GLM-4.5, GLM-4.5V, GLM-4.6 等模型提供 OpenAI 兼容的 API 接口
  * - 支持流式和非流式响应模式
  * - 提供实时监控 Dashboard 功能
  * - 支持匿名 token 自动获取
@@ -218,9 +218,9 @@ interface Model {
 const THINK_TAGS_MODE = "strip";
 
 // 伪装前端头部（来自抓包分析）
-const X_FE_VERSION = "prod-fe-1.0.70";
-const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0";
-const SEC_CH_UA = "\"Not;A=Brand\";v=\"99\", \"Microsoft Edge\";v=\"139\", \"Chromium\";v=\"139\"";
+const X_FE_VERSION = "prod-fe-1.0.94";
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+const SEC_CH_UA = "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"";
 const SEC_CH_UA_MOB = "?0";
 const SEC_CH_UA_PLAT = "\"Windows\"";
 const ORIGIN_BASE = "https://chat.z.ai";
@@ -282,6 +282,21 @@ const SUPPORTED_MODELS: ModelConfig[] = [
       top_p: 0.6,
       temperature: 0.8
     }
+  },
+  {
+    id: "glm-4.6",
+    name: "GLM-4.6",
+    upstreamId: "GLM-4-6-API-V1",
+    capabilities: {
+      vision: false,
+      mcp: true,
+      thinking: true
+    },
+    defaultParams: {
+      top_p: 0.95,
+      temperature: 0.6,
+      max_tokens: 80000
+    }
   }
 ];
 
@@ -319,7 +334,10 @@ function normalizeModelId(modelId: string): string {
     'glm-4.5': '0727-360B-API',
     'glm4.5': '0727-360B-API',
     'glm_4.5': '0727-360B-API',
-    'gpt-4': '0727-360B-API'  // 向后兼容
+    'gpt-4': '0727-360B-API',  // 向后兼容
+    'glm-4.6': 'glm-4.6',
+    'glm4.6': 'glm-4.6',
+    'glm_4.6': 'glm-4.6'
   };
   
   const mapped = modelMappings[normalized];
@@ -751,9 +769,20 @@ async function callUpstreamWithHeaders(
       }
     }
     
-    debugLog("上游请求体: %s", JSON.stringify(upstreamReq));
-    
-    const response = await fetch(UPSTREAM_URL, {
+    const reqBody = JSON.stringify(upstreamReq);
+    debugLog("上游请求体: %s", reqBody);
+
+    // 生成 X-Signature - 基于请求体的 SHA-256 哈希（426错误修复）
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(reqBody));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    debugLog("生成签名: %s (基于请求体SHA256)", signature);
+
+    // 构建带查询参数的URL
+    const timestamp = Date.now().toString();
+    const fullURL = `${UPSTREAM_URL}?timestamp=${timestamp}&token=${authToken}`;
+
+    const response = await fetch(fullURL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -765,10 +794,11 @@ async function callUpstreamWithHeaders(
         "sec-ch-ua-mobile": SEC_CH_UA_MOB,
         "sec-ch-ua-platform": SEC_CH_UA_PLAT,
         "X-FE-Version": X_FE_VERSION,
+        "X-Signature": signature,
         "Origin": ORIGIN_BASE,
         "Referer": `${ORIGIN_BASE}/c/${refererChatID}`
       },
-      body: JSON.stringify(upstreamReq)
+      body: reqBody
     });
     
     debugLog("上游响应状态: %d %s", response.status, response.statusText);
