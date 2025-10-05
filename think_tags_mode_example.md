@@ -6,6 +6,7 @@ The `X-Think-Tags-Mode` header allows you to customize how thinking content is p
 
 - **"strip"** - Remove `<details>` tags and show only the final content
 - **"thinking"** - Convert `<details>` tags to `<thinking>` tags
+- **"think"** - Convert `<details>` to `<think>` tags
 - **"raw"** - Keep the content exactly as-is from the upstream
 - **"separate"** - Separate reasoning into `reasoning_content` field (default)
 
@@ -31,6 +32,21 @@ curl -X POST "http://localhost:9090/v1/chat/completions" \
 curl -X POST "http://localhost:9090/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-api-key" \
+  -H "X-Think-Tags-Mode: thinking" \
+  -d '{
+    "model": "GLM-4.5",
+    "messages": [
+      {"role": "user", "content": "Write a poem about AI"}
+    ],
+    "stream": true
+  }'
+```
+
+### Example 3: Convert to simple think tags
+```bash
+curl -X POST "http://localhost:9090/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
   -H "X-Think-Tags-Mode: think" \
   -d '{
     "model": "GLM-4.5",
@@ -41,7 +57,7 @@ curl -X POST "http://localhost:9090/v1/chat/completions" \
   }'
 ```
 
-### Example 3: Get raw content
+### Example 4: Get raw content
 ```bash
 curl -X POST "http://localhost:9090/v1/chat/completions" \
   -H "Content-Type: application/json" \
@@ -55,7 +71,7 @@ curl -X POST "http://localhost:9090/v1/chat/completions" \
   }'
 ```
 
-### Example 4: Separate reasoning (default behavior)
+### Example 5: Separate reasoning (default behavior)
 ```bash
 curl -X POST "http://localhost:9090/v1/chat/completions" \
   -H "Content-Type: application/json" \
@@ -83,12 +99,24 @@ curl -X POST "http://localhost:9090/v1/chat/completions" \
 }
 ```
 
-### Think Mode Response
+### Thinking Mode Response
 ```json
 {
   "choices": [{
     "message": {
       "content": "<thinking>Let me think through this step by step...</thinking>Here's my final answer.",
+      "role": "assistant"
+    }
+  }]
+}
+```
+
+### Think Mode Response
+```json
+{
+  "choices": [{
+    "message": {
+      "content": "<think>Let me think through this step by step...</think>Here's my final answer.",
       "role": "assistant"
     }
   }]

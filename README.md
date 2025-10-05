@@ -4,7 +4,6 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-> 🤝 The reasoning tag separator is not perfect yet - we'd love your help to make it better! 💪
 
 > 🎓 For personal, non-commercial or educational use only. Please use responsibly! 🌈
 
@@ -14,9 +13,10 @@ Hey there! 👋 Welcome to ZtoApi - your super cool, high-performance OpenAI-com
 
 - 🔄 **OpenAI API compatible** — use your existing OpenAI clients without any changes! Easy peasy! 🎯
 - 🌊 **SSE streaming support** for real-time token delivery - watch the magic happen! ✨
-- 🧠 **Advanced thinking content processing** with 4 amazing modes:
+ - 🧠 **Advanced thinking content processing** with 5 amazing modes:
   - `"strip"` - Remove thinking tags, show only clean content 🧹
   - `"thinking"` - Convert `<details>` to `<thinking>` tags 💭
+  - `"think"` - Convert `<details>` to `<think>` tags (a simpler version of `thinking`)
   - `"raw"` - Keep original `<details>` tags as-is 📄
   - `"separate"` - Extract thinking into separate `reasoning_content` field 📊
 - 📊 **Built-in web Dashboard** with live request stats - monitor your API in style! 🎨
@@ -212,6 +212,7 @@ The `X-Think-Tags-Mode` header allows you to customize how thinking content is p
 
 - `"strip"` - Remove `<details>` tags and show only the final content 🧹
 - `"thinking"` - Convert `<details>` tags to `<thinking>` tags 💭
+- `"think"` - Convert `<details>` to `<think>` tags
 - `"raw"` - Keep the content exactly as-is from the upstream 📄
 - `"separate"` - Separate reasoning into `reasoning_content` field (default) 📊
 
@@ -228,6 +229,16 @@ curl -X POST http://localhost:9090/v1/chat/completions \
 ```
 
 **Convert to thinking tags for debugging:**
+```bash
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "X-Feature-Thinking: true" \
+  -H "X-Think-Tags-Mode: thinking" \
+  -d '{"model":"GLM-4-6-API-V1","messages":[{"role":"user","content":"Debug this code"}],"stream":true}'
+```
+
+**Convert to simple think tags:**
 ```bash
 curl -X POST http://localhost:9090/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -330,7 +341,7 @@ curl -X POST http://localhost:9090/v1/chat/completions \
 Set the default mode by modifying the `THINK_TAGS_MODE` constant in `main.ts`:
 
 ```typescript
-const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "separate"
+const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "think", "raw", "separate"
 ```
 
 **Note**: The `X-Think-Tags-Mode` header always overrides the server default! 🔄
@@ -348,6 +359,17 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "sep
      }]
    }
    ```
+3. **`"think"`** - Converts `<details>` tags to `<think>` tags for better readability 💭
+   ```json
+   {
+     "choices": [{
+       "message": {
+         "role": "assistant",
+         "content": "<think>Let me solve this step by step: 5 + 3...</think>\n\nThe answer is 8."
+       }
+     }]
+   }
+   ```
 
 2. **`"thinking"`** - Converts `<details>` tags to `<thinking>` tags for better readability 💭
    ```json
@@ -361,7 +383,7 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "sep
    }
    ```
 
-3. **`"raw"`** - Preserves original `<details>` tags as-is 📄
+4. **`"raw"`** - Preserves original `<details>` tags as-is 📄
    ```json
    {
      "choices": [{
@@ -373,7 +395,7 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "sep
    }
    ```
 
-4. **`"separate"`** - Extracts reasoning into a separate `reasoning_content` field 📊
+5. **`"separate"`** - Extracts reasoning into a separate `reasoning_content` field 📊
    ```json
    {
      "choices": [{

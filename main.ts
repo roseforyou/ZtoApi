@@ -220,9 +220,10 @@ interface Model {
 // Thinking content handling mode:
 // - "strip": remove <details> tags and show only content
 // - "thinking": convert <details> to <thinking> tags
+// - "think": convert <details> to <think> tags
 // - "raw": keep as-is
 // - "separate": separate reasoning into reasoning_content field
-const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "raw", "separate"
+const THINK_TAGS_MODE = "think"; // options: "strip", "thinking", "think", "raw", "separate"
 
 // Spoofed front-end headers (observed from capture)
 // Updated to match capture in example.json
@@ -801,9 +802,9 @@ async function callUpstreamWithHeaders(
 
 /**
  * Transform thinking content based on specified mode
- * Returns either a string (for "strip", "thinking", "raw" modes) or an object with reasoning and content
+ * Returns either a string (for "strip", "thinking", "think", "raw" modes) or an object with reasoning and content
  */
-function transformThinking(content: string, mode: "strip" | "thinking" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "raw" | "separate"): string | { reasoning: string; content: string } {
+export function transformThinking(content: string, mode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"): string | { reasoning: string; content: string } {
 
   // Raw mode: return as-is
   if (mode === "raw") {
@@ -865,7 +866,7 @@ function transformThinking(content: string, mode: "strip" | "thinking" | "raw" |
     return { reasoning, content: finalContent };
   }
 
-  // For "strip" and "thinking" modes, process as string
+  // For "strip", "thinking", and "think" modes, process as string
   let result = content;
 
   // Handle complete <details> tags first
@@ -875,6 +876,11 @@ function transformThinking(content: string, mode: "strip" | "thinking" | "raw" |
         // Convert <details> to <thinking>, preserve content structure
         result = result.replace(/<details[^>]*>/g, "<thinking>");
         result = result.replace(/<\/details>/g, "</thinking>");
+        break;
+      case "think":
+        // Convert <details> to <think>, preserve content structure
+        result = result.replace(/<details[^>]*>/g, "<think>");
+        result = result.replace(/<\/details>/g, "</think>");
         break;
       case "strip":
         // Remove <details> tags but keep content
@@ -894,6 +900,9 @@ function transformThinking(content: string, mode: "strip" | "thinking" | "raw" |
     switch (mode) {
       case "thinking":
         result = "<thinking>" + thinkingPart + "</thinking>" + contentPart;
+        break;
+      case "think":
+        result = "<think>" + thinkingPart + "</think>" + contentPart;
         break;
       case "strip":
         result = thinkingPart + contentPart;
@@ -923,7 +932,7 @@ async function processUpstreamStream(
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
   modelName: string,
-  thinkTagsMode: "strip" | "thinking" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "raw" | "separate"
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<Usage | null> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -1217,7 +1226,7 @@ async function processUpstreamStream(
 // Collect full response for non-streaming mode
 async function collectFullResponse(
   body: ReadableStream<Uint8Array>,
-  thinkTagsMode: "strip" | "thinking" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "raw" | "separate"
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<{content: string, reasoning_content?: string, usage: Usage | null}> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -1452,18 +1461,18 @@ async function handleChatCompletions(request: Request): Promise<Response> {
   };
 
   // Parse think tags mode header with validation
-  const parseThinkTagsMode = (headerValue: string | null): "strip" | "thinking" | "raw" | "separate" => {
-    if (headerValue === null) return THINK_TAGS_MODE as "strip" | "thinking" | "raw" | "separate";
+  const parseThinkTagsMode = (headerValue: string | null): "strip" | "thinking" | "think" | "raw" | "separate" => {
+    if (headerValue === null) return THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate";
 
-    const validModes = ["strip", "thinking", "raw", "separate"];
+    const validModes = ["strip", "thinking", "think", "raw", "separate"];
     const normalizedValue = headerValue.toLowerCase().trim();
     
     if (validModes.includes(normalizedValue)) {
-      return normalizedValue as "strip" | "thinking" | "raw" | "separate";
+      return normalizedValue as "strip" | "thinking" | "think" | "raw" | "separate";
     }
     
     debugLog("⚠️ Invalid X-Think-Tags-Mode value: %s. Using default: %s", headerValue, THINK_TAGS_MODE);
-    return THINK_TAGS_MODE as "strip" | "thinking" | "raw" | "separate";
+    return THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate";
   };
 
   const currentThinkTagsMode = parseThinkTagsMode(thinkTagsModeHeader);
@@ -1721,7 +1730,7 @@ async function handleStreamResponse(
   userAgent: string,
   req: OpenAIRequest,
   modelConfig: ModelConfig,
-  thinkTagsMode: "strip" | "thinking" | "raw" | "separate"
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<Response> {
   debugLog("Starting to handle stream response (chat_id=%s)", chatID);
 
@@ -1809,7 +1818,7 @@ async function handleNonStreamResponse(
   userAgent: string,
   req: OpenAIRequest,
   modelConfig: ModelConfig,
-  thinkTagsMode: "strip" | "thinking" | "raw" | "separate"
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<Response> {
   debugLog("Starting to handle non-stream response (chat_id=%s)", chatID);
 
@@ -2162,4 +2171,6 @@ async function handleRequest(request: Request): Promise<Response> {
 }
 
 // Start server
-main();
+if (import.meta.main) {
+  main();
+}
