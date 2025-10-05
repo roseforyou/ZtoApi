@@ -1,0 +1,8 @@
+OpenAI-compatible API server starting
+Supported models: 0727-360B-API (GLM-4.5), GLM-4-6-API-V1 (GLM-4.6), glm-4.5v (GLM-4.5V)
+Upstream: https://chat.z.ai/api/chat/completions
+Debug mode: true
+Default streaming: true
+Dashboard enabled: true
+Running locally on port: 9090
+Dashboard enabled at: http://localhost:9090/dashboard

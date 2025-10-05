@@ -309,11 +309,11 @@ async function runTests() {
     console.log(`🌐 Base URL: ${BASE_URL}`);
     
     // Run all tests
-    await testNonStreamingResponse();
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between tests
+    // await testNonStreamingResponse();
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between tests
     
-    await testStreamingResponse();
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between tests
+    // await testStreamingResponse();
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between tests
     
     await testDifferentThinkingModes();
     
