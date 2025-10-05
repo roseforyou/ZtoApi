@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  ztoapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ztoapi_service
+    ports:
+      - "9090:9090"
+    environment:
+      - DEFAULT_KEY=your-secret-key
+      # - ZAI_TOKEN=your-zai-token
+      # - DEBUG_MODE=true
+    restart: unless-stopped
