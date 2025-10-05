@@ -339,10 +339,11 @@ section {
   border-radius: 15px;
   transition: all 0.3s ease;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  transform-style: preserve-3d;
 }
 
 section:hover {
-  transform: translateY(-10px);
+  transform: translateY(-10px) rotateX(5deg);
   box-shadow: 0 0 30px var(--glow-color), 0 10px 20px var(--shadow-strong);
 }
 

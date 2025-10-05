@@ -266,6 +266,7 @@ h2::before {
   cursor: pointer;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   animation: subtle-bob 3s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
 
 .stat-card::before {
@@ -285,7 +286,7 @@ h2::before {
 }
 
 .stat-card:hover {
-  transform: translateY(-15px) scale(1.03);
+  transform: translateY(-15px) scale(1.03) rotateX(5deg);
   box-shadow: 0 0 40px var(--glow-color), 0 15px 30px var(--shadow-strong);
   border-color: var(--accent-primary);
   animation-play-state: paused;
