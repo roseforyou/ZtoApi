@@ -43,8 +43,9 @@
                         <span class="stat-label">% Uptime</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-number" data-target="50">0</span>
-                        <span class="stat-label">ms Latency</span>
+                        <span class="stat-number">0.02ms</span>
+                        <span class="stat-label">Average Response Time</span>
+                        <small style="display: block; color: var(--text-secondary); font-size: 0.75rem; margin-top: 5px;">(excluding the z.ai request time)</small>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number" data-target="1000">0</span>
@@ -267,8 +268,11 @@
                 if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
                     const statNumbers = entry.target.querySelectorAll('.stat-number');
                     statNumbers.forEach(stat => {
-                        const target = parseFloat(stat.getAttribute('data-target'));
-                        animateCounter(stat, target);
+                        const targetValue = stat.getAttribute('data-target');
+                        if (targetValue !== null) {
+                            const target = parseFloat(targetValue);
+                            animateCounter(stat, target);
+                        }
                     });
                     entry.target.classList.add('animated');
                 }

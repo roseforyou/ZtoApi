@@ -198,13 +198,13 @@ async function testStreamingResponse() {
                             // Handle reasoning content (thinking)
                             if (delta.reasoning_content) {
                                 reasoningContent += delta.reasoning_content;
-                                process.stdout.write(`🧠 [Thinking] ${delta.reasoning_content}`);
+                                Deno.stdout.writeSync(new TextEncoder().encode(`🧠 [Thinking] ${delta.reasoning_content}`));
                             }
                             
                             // Handle regular content
                             if (delta.content) {
                                 fullContent += delta.content;
-                                process.stdout.write(delta.content);
+                                Deno.stdout.writeSync(new TextEncoder().encode(delta.content));
                             }
                             
                             // Log finish reason
@@ -348,18 +348,18 @@ async function checkServerHealth() {
 }
 
 // Run tests if server is available
-if (require.main === module) {
+if (import.meta.main) {
     checkServerHealth().then(isHealthy => {
         if (isHealthy) {
             runTests().catch(console.error);
         } else {
             console.log('❌ Cannot run tests - server is not accessible');
-            process.exit(1);
+            Deno.exit(1);
         }
     });
 }
 
-module.exports = {
+export {
     testNonStreamingResponse,
     testStreamingResponse,
     testDifferentThinkingModes,

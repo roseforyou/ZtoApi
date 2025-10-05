@@ -135,12 +135,24 @@ body.loaded {
   }
 }
 
+@keyframes subtle-bob {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
 /* Theme Toggle */
 .theme-toggle {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 9999;
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
@@ -157,8 +169,8 @@ body.loaded {
 }
 
 .theme-toggle:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 25px var(--shadow-strong);
+  transform: scale(1.1);
+  box-shadow: 0 6px 25px var(--shadow-strong), 0 0 20px var(--glow-color);
   border-color: var(--accent-primary);
 }
 
@@ -174,14 +186,13 @@ body.loaded {
 
 /* Container */
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: 95%;
+  margin: 40px auto;
   background: var(--bg-overlay);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 40px;
-  margin: 40px 80px 40px 80px;
   box-shadow: 0 20px 40px var(--shadow-medium);
   position: relative;
   z-index: 1;
@@ -244,15 +255,18 @@ h2::before {
 
 .stat-card {
   background: var(--bg-glass);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 30px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  animation: subtle-bob 3s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
 
 .stat-card::before {
@@ -272,9 +286,10 @@ h2::before {
 }
 
 .stat-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 20px 40px var(--shadow-medium);
+  transform: translateY(-15px) scale(1.03) rotateX(5deg);
+  box-shadow: 0 0 40px var(--glow-color), 0 15px 30px var(--shadow-strong);
   border-color: var(--accent-primary);
+  animation-play-state: paused;
 }
 
 .stat-value {
@@ -308,7 +323,7 @@ h2::before {
 /* Chart Container */
 .chart-container {
   background: var(--bg-glass);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 30px;
@@ -316,11 +331,12 @@ h2::before {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .chart-container:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px var(--shadow-medium);
+  transform: translateY(-10px);
+  box-shadow: 0 0 30px var(--glow-color), 0 10px 20px var(--shadow-strong);
 }
 
 .chart-container::before {
@@ -348,7 +364,7 @@ h2::before {
 /* Requests Container */
 .requests-container {
   background: var(--bg-glass);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 30px;
@@ -356,11 +372,12 @@ h2::before {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .requests-container:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px var(--shadow-medium);
+  transform: translateY(-10px);
+  box-shadow: 0 0 30px var(--glow-color), 0 10px 20px var(--shadow-strong);
 }
 
 .requests-container::before {
