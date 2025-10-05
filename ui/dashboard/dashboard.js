@@ -7,12 +7,42 @@ function updateStats() {
     fetch('/dashboard/stats')
         .then(response => response.json())
         .then(data => {
-            document.getElementById('total-requests').textContent = data.totalRequests || 0;
-            document.getElementById('successful-requests').textContent = data.successfulRequests || 0;
-            document.getElementById('failed-requests').textContent = data.failedRequests || 0;
-            document.getElementById('avg-response-time').textContent = ((data.averageResponseTime || 0) / 1000).toFixed(2) + 's';
+            // Animate the stat updates
+            animateValue('total-requests', parseInt(document.getElementById('total-requests').textContent) || 0, data.totalRequests || 0, 1000);
+            animateValue('successful-requests', parseInt(document.getElementById('successful-requests').textContent) || 0, data.successfulRequests || 0, 1000);
+            animateValue('failed-requests', parseInt(document.getElementById('failed-requests').textContent) || 0, data.failedRequests || 0, 1000);
+            
+            const avgTime = ((data.averageResponseTime || 0) / 1000).toFixed(2);
+            const avgTimeElement = document.getElementById('avg-response-time');
+            avgTimeElement.textContent = avgTime + 's';
+            avgTimeElement.style.animation = 'pulse 0.5s ease';
+            setTimeout(() => avgTimeElement.style.animation = '', 500);
         })
-        .catch(error => console.error('Error fetching stats:', error));
+        .catch(error => {
+            console.error('Error fetching stats:', error);
+            // Show error state
+            document.getElementById('total-requests').textContent = '---';
+            document.getElementById('successful-requests').textContent = '---';
+            document.getElementById('failed-requests').textContent = '---';
+            document.getElementById('avg-response-time').textContent = '---';
+        });
+}
+
+function animateValue(id, start, end, duration) {
+    const element = document.getElementById(id);
+    const range = end - start;
+    const increment = range / (duration / 16);
+    let current = start;
+    
+    const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+            element.textContent = end;
+            clearInterval(timer);
+        } else {
+            element.textContent = Math.floor(current);
+        }
+    }, 16);
 }
 
 function updateRequests() {
@@ -105,6 +135,13 @@ function updateChart() {
         requestsChart.destroy();
     }
 
+    // Get CSS variables for theming
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    const textColor = isDarkMode ? '#f1f5f9' : '#1e293b';
+    const gridColor = isDarkMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(100, 116, 139, 0.1)';
+    const gradientColor = isDarkMode ? 'rgba(96, 165, 250, 0.2)' : 'rgba(102, 126, 234, 0.2)';
+    const borderColor = isDarkMode ? '#60a5fa' : '#667eea';
+
     requestsChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -112,34 +149,76 @@ function updateChart() {
             datasets: [{
                 label: 'Response Time (s)',
                 data: responseTimes.map(time => time / 1000),
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                tension: 0.1,
-                fill: true
+                borderColor: borderColor,
+                backgroundColor: gradientColor,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: borderColor,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             scales: {
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Response Time (s)'
+                        text: 'Response Time (s)',
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
                     }
                 },
                 x: {
                     title: {
                         display: true,
-                        text: 'Time'
+                        text: 'Time',
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
                     }
                 }
             },
             plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
                 title: {
                     display: true,
-                    text: 'Response time trend for last 20 requests (s)'
+                    text: 'Response time trend for last 20 requests',
+                    color: textColor,
+                    font: {
+                        size: 16,
+                        weight: '600'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                    titleColor: textColor,
+                    bodyColor: textColor,
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12
                 }
             }
         }
@@ -163,8 +242,40 @@ document.getElementById('next-page').addEventListener('click', function() {
     }
 });
 
-updateStats();
-updateRequests();
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    updateStats();
+    updateRequests();
 
-setInterval(updateStats, 5000);
-setInterval(updateRequests, 5000);
+    // Set up auto-refresh
+    setInterval(updateStats, 5000);
+    setInterval(updateRequests, 5000);
+    
+    // Add theme change listener to update chart
+    const observer = new MutationObserver(() => {
+        if (allRequests.length > 0) {
+            updateChart();
+        }
+    });
+    
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
+    
+    // Add loading animation
+    document.body.classList.add('loaded');
+});
+
+// Handle visibility change to pause updates when tab is not visible
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // Pause updates when tab is hidden
+        console.log('Dashboard paused - tab is hidden');
+    } else {
+        // Resume updates when tab is visible
+        updateStats();
+        updateRequests();
+        console.log('Dashboard resumed - tab is visible');
+    }
+});
