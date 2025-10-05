@@ -19,6 +19,12 @@
  * @version 2.0.0
  * @since 2024
  */
+declare global {
+  interface ImportMeta {
+    main: boolean;
+  }
+}
+
 declare namespace Deno {
   interface Conn {
     readonly rid: number;
@@ -1909,7 +1915,7 @@ async function handleNonStreamResponse(
  */
 async function getDashboardHTML(): Promise<string> {
   try {
-    return await Deno.readTextFile('./ui/dashboard.html');
+    return await Deno.readTextFile('./ui/dashboard/dashboard.html');
   } catch (error) {
     console.error('Failed to read dashboard.html:', error);
     return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
@@ -1953,7 +1959,7 @@ async function handleDashboardRequests(request: Request): Promise<Response> {
 
 async function getDocsHTML(): Promise<string> {
   try {
-    return await Deno.readTextFile('./ui/docs.html');
+    return await Deno.readTextFile('./ui/docs/docs.html');
   } catch (error) {
     console.error('Failed to read docs.html:', error);
     return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
