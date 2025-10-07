@@ -20,6 +20,8 @@
  * @version 2.0.0
  * @since 2024
  */
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
 declare namespace Deno {
   interface Conn {
     readonly rid: number;
@@ -678,109 +680,109 @@ async function getAnonymousToken(): Promise<string> {
   }
 }
 
-// 调用上游API
+
+/**
+ * 生成Z.ai API请求签名
+ * @param e "requestId,request_id,timestamp,timestamp,user_id,user_id"
+ * @param t 用户最新消息
+ * @param timestamp 时间戳 (毫秒)
+ * @returns { signature: string, timestamp: number }
+ */
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
+  const r = String(timestamp);
+  const i = `${e}|${t}|${r}`;
+  const n = Math.floor(timestamp / (5 * 60 * 1000));
+  const key = new TextEncoder().encode("junjie");
+
+  // 第一层 HMAC
+  const firstHmacKey = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const firstSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    firstHmacKey,
+    new TextEncoder().encode(String(n))
+  );
+  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 第二层 HMAC
+  const secondHmacKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(o),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const secondSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    secondHmacKey,
+    new TextEncoder().encode(i)
+  );
+  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  debugLog("签名生成成功: %s", signature);
+  return {
+      signature,
+      timestamp
+  };
+}
+
 async function callUpstreamWithHeaders(
-  upstreamReq: UpstreamRequest, 
-  refererChatID: string, 
+  upstreamReq: UpstreamRequest,
+  refererChatID: string,
   authToken: string
 ): Promise<Response> {
   try {
     debugLog("调用上游API: %s", UPSTREAM_URL);
-    
-    // 特别检查和记录全方位多模态内容
-    const hasMultimedia = upstreamReq.messages.some(msg => 
-      Array.isArray(msg.content) && 
-      msg.content.some(block => 
-        ['image_url', 'video_url', 'document_url', 'audio_url'].includes(block.type)
-      )
-    );
-    
-    if (hasMultimedia) {
-      debugLog("🎯 请求包含多模态数据，正在发送到上游...");
-      
-      for (let i = 0; i < upstreamReq.messages.length; i++) {
-        const msg = upstreamReq.messages[i];
-        if (Array.isArray(msg.content)) {
-          for (let j = 0; j < msg.content.length; j++) {
-            const block = msg.content[j];
-            
-            // 处理图像
-            if (block.type === 'image_url' && block.image_url?.url) {
-              const url = block.image_url.url;
-              if (url.startsWith('data:image/')) {
-                const mimeMatch = url.match(/data:image\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                const sizeKB = Math.round(url.length * 0.75 / 1024); // base64 大约是原文件的 1.33 倍
-                debugLog("🖼️ 消息[%d] 图像[%d]: %s格式, 数据长度: %d字符 (~%dKB)", 
-                  i, j, format, url.length, sizeKB);
-                
-                // 图片大小警告
-                if (sizeKB > 1000) {
-                  debugLog("⚠️  图片较大 (%dKB)，可能导致上游处理失败", sizeKB);
-                  debugLog("💡 建议: 将图片压缩到 500KB 以下");
-                } else if (sizeKB > 500) {
-                  debugLog("⚠️  图片偏大 (%dKB)，建议压缩", sizeKB);
-                }
-              } else {
-                debugLog("🔗 消息[%d] 图像[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理视频
-            if (block.type === 'video_url' && block.video_url?.url) {
-              const url = block.video_url.url;
-              if (url.startsWith('data:video/')) {
-                const mimeMatch = url.match(/data:video\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎥 消息[%d] 视频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 视频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理文档
-            if (block.type === 'document_url' && block.document_url?.url) {
-              const url = block.document_url.url;
-              if (url.startsWith('data:application/')) {
-                const mimeMatch = url.match(/data:application\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("📄 消息[%d] 文档[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 文档[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理音频
-            if (block.type === 'audio_url' && block.audio_url?.url) {
-              const url = block.audio_url.url;
-              if (url.startsWith('data:audio/')) {
-                const mimeMatch = url.match(/data:audio\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎵 消息[%d] 音频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 音频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-          }
-        }
+
+    // 1. 解码JWT获取user_id
+    let userId = "unknown";
+    try {
+      const tokenParts = authToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(new TextDecoder().decode(decodeBase64(tokenParts[1])));
+        userId = payload.id || userId;
+        debugLog("从JWT解析到 user_id: %s", userId);
       }
+    } catch (e) {
+      debugLog("解析JWT失败: %v", e);
     }
-    
+
+    // 2. 准备签名所需参数
+    const timestamp = Date.now();
+    const requestId = crypto.randomUUID();
+    const userMessage = upstreamReq.messages.filter(m => m.role === 'user').pop()?.content;
+    const lastMessageContent = typeof userMessage === 'string' ? userMessage :
+      (Array.isArray(userMessage) ? userMessage.find(c => c.type === 'text')?.text || "" : "");
+
+    if (!lastMessageContent) {
+      throw new Error("无法获取用于签名的用户消息内容");
+    }
+
+    const e = `requestId,${requestId},timestamp,${timestamp},user_id,${userId}`;
+
+    // 3. 生成新签名
+    const { signature } = await generateSignature(e, lastMessageContent, timestamp);
+    debugLog("生成新版签名: %s", signature);
+
     const reqBody = JSON.stringify(upstreamReq);
     debugLog("上游请求体: %s", reqBody);
 
-    // 生成 X-Signature - 基于请求体的 SHA-256 哈希（426错误修复）
-    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(reqBody));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    debugLog("生成签名: %s (基于请求体SHA256)", signature);
-
-    // 构建带查询参数的URL
-    const timestamp = Date.now().toString();
-    const fullURL = `${UPSTREAM_URL}?timestamp=${timestamp}&token=${authToken}`;
+    // 4. 构建带新参数的URL和Headers
+    const params = new URLSearchParams({
+        timestamp: timestamp.toString(),
+        requestId: requestId,
+        user_id: userId,
+        token: authToken,
+        current_url: `${ORIGIN_BASE}/c/${refererChatID}`,
+        pathname: `/c/${refererChatID}`,
+        signature_timestamp: timestamp.toString()
+    });
+    const fullURL = `${UPSTREAM_URL}?${params.toString()}`;
 
     const response = await fetch(fullURL, {
       method: "POST",
@@ -789,10 +791,6 @@ async function callUpstreamWithHeaders(
         "Accept": "application/json, text/event-stream",
         "User-Agent": BROWSER_UA,
         "Authorization": `Bearer ${authToken}`,
-        "Accept-Language": "zh-CN",
-        "sec-ch-ua": SEC_CH_UA,
-        "sec-ch-ua-mobile": SEC_CH_UA_MOB,
-        "sec-ch-ua-platform": SEC_CH_UA_PLAT,
         "X-FE-Version": X_FE_VERSION,
         "X-Signature": signature,
         "Origin": ORIGIN_BASE,
@@ -800,7 +798,7 @@ async function callUpstreamWithHeaders(
       },
       body: reqBody
     });
-    
+
     debugLog("上游响应状态: %d %s", response.status, response.statusText);
     return response;
   } catch (error) {
@@ -2088,7 +2086,7 @@ headers: {
 }
 
 // 处理Dashboard统计数据
-async function handleDashboardStats(request: Request): Promise<Response> {
+async function handleDashboardStats(_request: Request): Promise<Response> {
   return new Response(getStatsData(), {
     status: 200,
     headers: {
@@ -2097,7 +2095,7 @@ async function handleDashboardStats(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardRequests(request: Request): Promise<Response> {
+async function handleDashboardRequests(_request: Request): Promise<Response> {
   return new Response(getLiveRequestsData(), {
     status: 200,
     headers: {
