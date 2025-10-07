@@ -22,6 +22,6 @@ jobs:
       - name: Run opencode
         uses: sst/opencode/github@latest
         env:
-          CHUTES_API_KEY: ${{ secrets.CHUTES_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         with:
-          model: chutes/zai-org/GLM-4.5-Air
+          model: groq/moonshotai/kimi-k2-instruct-0905
