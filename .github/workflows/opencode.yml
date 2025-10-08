@@ -22,6 +22,7 @@ jobs:
       - name: Run opencode
         uses: sst/opencode/github@latest
         env:
-          CHUTES_API_KEY: ${{ secrets.CHUTES_API_KEY }}
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
-          model: chutes/zai-org/GLM-4.5-Air
+          model: google/gemini-2.5-flash
