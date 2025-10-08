@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZtoApi - OpenAI-compatible API proxy</title>
+    <title>ZtoApi - OpenAI & Anthropic-compatible API proxy</title>
     <link rel="stylesheet" href="/ui/index.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,8 +35,8 @@
                     <h1 class="logo">ZtoApi</h1>
                     <div class="logo-glow"></div>
                 </div>
-                <div class="subtitle">OpenAI-compatible proxy for Z.ai GLM-4.5</div>
-                <p class="hero-description">A high-performance, easy-to-deploy API proxy that allows you to use OpenAI-compatible formats to access Z.ai's GLM-4.5 models.</p>
+                <div class="subtitle">OpenAI & Anthropic-compatible proxy for Z.ai GLM-4.5</div>
+                <p class="hero-description">A high-performance, easy-to-deploy API proxy that allows you to use both OpenAI and Anthropic-compatible formats to access Z.ai's GLM-4.5, GLM-4.6, and GLM-4.5V models.</p>
                 <div class="hero-stats">
                     <div class="stat-item">
                         <span class="stat-number" data-target="99.9">0</span>
@@ -97,6 +97,18 @@
                     <div class="card-glow"></div>
                     <div class="card-shine"></div>
                 </div>
+
+                <div class="link-card" data-tilt>
+                    <div class="card-icon">🧠</div>
+                    <h3>Anthropic API</h3>
+                    <p>Access GLM models using Anthropic's API format.</p>
+                    <a href="/anthropic/v1/models" class="card-link">
+                        <span>View Anthropic Models</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <div class="card-glow"></div>
+                    <div class="card-shine"></div>
+                </div>
             </div>
         </section>
 
@@ -112,8 +124,8 @@
                         <div class="feature-icon">🔄</div>
                         <div class="icon-glow"></div>
                     </div>
-                    <h3>OpenAI API Compatible</h3>
-                    <p>Fully compatible with OpenAI API format — no client changes required</p>
+                    <h3>Dual API Compatibility</h3>
+                    <p>Fully compatible with both OpenAI and Anthropic API formats — use your preferred SDK!</p>
                 </div>
 
                 <div class="feature-item" data-aos="fade-up" data-aos-delay="100">
@@ -165,7 +177,7 @@
 
         <footer class="footer">
             <div class="footer-content">
-                <p>© 2024 ZtoApi. Powered by Deno & Z.ai GLM-4.5</p>
+                <p>© 2024 ZtoApi. Powered by Deno & Z.ai GLM-4.5, GLM-4.6, GLM-4.5V</p>
                 <div class="footer-links">
                     <a href="#" class="footer-link">GitHub</a>
                     <a href="#" class="footer-link">Support</a>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZtoApi Docs</title>
+    <title>ZtoApi Docs - OpenAI & Anthropic APIs</title>
     <link rel="stylesheet" href="/ui/docs/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,10 +29,18 @@
         <ul>
             <li><a href="#overview">Overview</a></li>
             <li><a href="#authentication">Authentication</a></li>
-            <li><a href="#endpoints">API Endpoints</a>
+            <li><a href="#endpoints">OpenAI API Endpoints</a>
                 <ul>
                     <li><a href="#models">Get Models</a></li>
                     <li><a href="#chat-completions">Chat Completions</a></li>
+                </ul>
+            </li>
+            <li><a href="#anthropic-endpoints">Anthropic API Endpoints</a>
+                <ul>
+                    <li><a href="#anthropic-models">Get Anthropic Models</a></li>
+                    <li><a href="#anthropic-messages">Anthropic Messages</a></li>
+                    <li><a href="#anthropic-count-tokens">Count Tokens</a></li>
+                    <li><a href="#anthropic-batches">Message Batches</a></li>
                 </ul>
             </li>
             <li><a href="#examples">Examples</a></li>
@@ -42,8 +50,9 @@
 
     <section id="overview">
         <h2>Overview</h2>
-        <p>This is an OpenAI-compatible proxy for Z.ai GLM-4.5 models. It allows interactions using standard OpenAI API formats and supports streaming and non-streaming responses.</p>
-        <p><strong>Base URL:</strong> <code>http://localhost:9090/v1</code></p>
+        <p>This is a dual-compatible API proxy for Z.ai GLM-4.5, GLM-4.6, and GLM-4.5V models. It supports both OpenAI and Anthropic API formats with streaming and non-streaming responses.</p>
+        <p><strong>OpenAI Base URL:</strong> <code>http://localhost:9090/v1</code></p>
+        <p><strong>Anthropic Base URL:</strong> <code>http://localhost:9090/anthropic/v1</code></p>
         <div class="note">
             <strong>Note:</strong> Default port is 9090 and can be changed via PORT environment variable.
         </div>
@@ -53,12 +62,17 @@
         <h2>Authentication</h2>
         <p>All API requests must include a valid API key in the request header:</p>
         <div class="example">
+<strong>OpenAI Style:</strong>
 Authorization: Bearer your-api-key</div>
+        <div class="example">
+<strong>Anthropic Style:</strong>
+x-api-key: your-api-key</div>
         <p>The default API key is <code>sk-your-key</code>. Change it with the <code>DEFAULT_KEY</code> environment variable.</p>
+        <p>Both authentication methods work for both API formats for maximum compatibility.</p>
     </section>
 
     <section id="endpoints">
-        <h2>API Endpoints</h2>
+        <h2>OpenAI API Endpoints</h2>
 
         <div class="endpoint" id="models">
             <h3>Get Models</h3>
@@ -167,12 +181,247 @@ Authorization: Bearer your-api-key</div>
         </div>
     </section>
 
+    <section id="anthropic-endpoints">
+        <h2>Anthropic API Endpoints</h2>
+
+        <div class="endpoint" id="anthropic-models">
+            <h3>Get Anthropic Models</h3>
+            <div>
+                <span class="method get">GET</span>
+                <span class="path">/anthropic/v1/models</span>
+            </div>
+            <div class="description">
+                <p>Returns the list of available models in Anthropic format.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <p>None</p>
+            </div>
+            <div class="response">{
+  "type": "models",
+  "models": [
+    {
+      "id": "0727-360B-API",
+      "object": "model",
+      "created": 1756788845,
+      "name": "GLM-4.5",
+      "type": "text"
+    },
+    {
+      "id": "GLM-4-6-API-V1",
+      "object": "model",
+      "created": 1756788845,
+      "name": "GLM-4.6",
+      "type": "text"
+    },
+    {
+      "id": "glm-4.5v",
+      "object": "model",
+      "created": 1756788845,
+      "name": "GLM-4.5V",
+      "type": "multimodal"
+    }
+  ]
+}</div>
+        </div>
+
+        <div class="endpoint" id="anthropic-messages">
+            <h3>Anthropic Messages</h3>
+            <div>
+                <span class="method post">POST</span>
+                <span class="path">/anthropic/v1/messages</span>
+            </div>
+            <div class="description">
+                <p>Generate model responses using Anthropic's message format. Supports streaming and non-streaming modes.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>model</td>
+                            <td>string</td>
+                            <td>yes</td>
+                            <td>Model ID to use, e.g. "GLM-4-6-API-V1"</td>
+                        </tr>
+                        <tr>
+                            <td>messages</td>
+                            <td>array</td>
+                            <td>yes</td>
+                            <td>List of messages containing role and content</td>
+                        </tr>
+                        <tr>
+                            <td>max_tokens</td>
+                            <td>integer</td>
+                            <td>yes</td>
+                            <td>Maximum tokens to generate</td>
+                        </tr>
+                        <tr>
+                            <td>stream</td>
+                            <td>boolean</td>
+                            <td>no</td>
+                            <td>Whether to use streaming responses; default false</td>
+                        </tr>
+                        <tr>
+                            <td>temperature</td>
+                            <td>number</td>
+                            <td>no</td>
+                            <td>Sampling temperature to control randomness</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="parameters">
+                <h4>Message Format</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>role</td>
+                            <td>string</td>
+                            <td>Message role: user, assistant</td>
+                        </tr>
+                        <tr>
+                            <td>content</td>
+                            <td>string</td>
+                            <td>Message content</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="response">{
+  "id": "msg_123456",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "Hello! How can I help you today?"
+    }
+  ],
+  "model": "GLM-4-6-API-V1",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 15
+  }
+}</div>
+        </div>
+
+        <div class="endpoint" id="anthropic-count-tokens">
+            <h3>Count Tokens</h3>
+            <div>
+                <span class="method post">POST</span>
+                <span class="path">/anthropic/v1/messages/count_tokens</span>
+            </div>
+            <div class="description">
+                <p>Count tokens in messages before making a request.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>model</td>
+                            <td>string</td>
+                            <td>yes</td>
+                            <td>Model ID to use for token counting</td>
+                        </tr>
+                        <tr>
+                            <td>messages</td>
+                            <td>array</td>
+                            <td>yes</td>
+                            <td>List of messages to count tokens for</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="response">{
+  "input_tokens": 25
+}</div>
+        </div>
+
+        <div class="endpoint" id="anthropic-batches">
+            <h3>Message Batches</h3>
+            <div>
+                <span class="method post">POST</span>
+                <span class="path">/anthropic/v1/messages/batches</span>
+            </div>
+            <div class="description">
+                <p>Process multiple requests in a single batch for efficiency.</p>
+            </div>
+            <div class="parameters">
+                <h4>Request Parameters</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>requests</td>
+                            <td>array</td>
+                            <td>yes</td>
+                            <td>Array of request objects with custom_id and params</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="response">{
+  "id": "batch_123456",
+  "type": "batch",
+  "requests": [
+    {
+      "custom_id": "request-1",
+      "result": {
+        "id": "msg_123",
+        "type": "message",
+        "role": "assistant",
+        "content": [{"type": "text", "text": "Response 1"}],
+        "model": "GLM-4-6-API-V1",
+        "usage": {"input_tokens": 10, "output_tokens": 15}
+      }
+    }
+  ]
+}</div>
+        </div>
+    </section>
+
     <section id="examples">
         <h2>Examples</h2>
 
         <div class="tab">
             <button class="tablinks active" onclick="openTab(event, 'python-tab')">Python</button>
+            <button class="tablinks" onclick="openTab(event, 'anthropic-python-tab')">Anthropic Python</button>
             <button class="tablinks" onclick="openTab(event, 'curl-tab')">cURL</button>
+            <button class="tablinks" onclick="openTab(event, 'anthropic-curl-tab')">Anthropic cURL</button>
             <button class="tablinks" onclick="openTab(event, 'javascript-tab')">JavaScript</button>
         </div>
 
@@ -194,6 +443,29 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)</div>
+        </div>
+
+        <div id="anthropic-python-tab" class="tabcontent">
+            <h3>Anthropic Python Example</h3>
+            <div class="example">
+from anthropic import Anthropic
+
+# Configure client
+client = Anthropic(
+    api_key="your-api-key",  # corresponds to DEFAULT_KEY
+    base_url="http://localhost:9090/anthropic/v1"
+)
+
+# Non-streaming example - GLM-4.6
+message = client.messages.create(
+    model="GLM-4-6-API-V1",
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "Hello, please introduce yourself"}
+    ]
+)
+
+print(message.content[0].text)</div>
         </div>
 
         <div id="curl-tab" class="tabcontent">
@@ -218,6 +490,35 @@ curl -X POST http://localhost:9090/v1/chat/completions \
     "messages": [{"role": "user", "content": "Hello"}],
     "stream": true
 }'</div>
+        </div>
+
+        <div id="anthropic-curl-tab" class="tabcontent">
+            <h3>Anthropic cURL Example</h3>
+            <div class="example">
+# Non-streaming
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "GLM-4-6-API-V1",
+    "max_tokens": 1024,
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
+
+# Streaming
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "GLM-4-6-API-V1",
+    "max_tokens": 1024,
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'</div>
         </div>
 
         <div id="javascript-tab" class="tabcontent">

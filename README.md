@@ -4,6 +4,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+> WARNING: The anthropic implmentation is NOT COMPLETE 
 
 > 🎓 For personal, non-commercial or educational use only. Please use responsibly! 🌈
 
@@ -141,13 +142,22 @@ Customize your experience with these settings! 🎛️
 
 Here are all the amazing endpoints you can use! 🎯
 
+### OpenAI-Compatible Endpoints
 - `GET /` — homepage 🏠
 - `GET /v1/models` — list available models 🤖
 - `POST /v1/chat/completions` — main chat endpoint (OpenAI-compatible) 💬
 - `GET /docs` — API documentation page 📚
 - `GET /dashboard` — monitoring dashboard (if enabled) 📊
 
-Base path: http://localhost:9090/v1 🌐
+### 🆕 Anthropic-Compatible Endpoints
+- `GET /anthropic/v1/models` — list available models (Anthropic format) 🤖
+- `POST /anthropic/v1/messages` — chat endpoint (Anthropic-compatible) 💬
+- `POST /anthropic/v1/messages/count_tokens` — count tokens in messages 🔢
+- `POST /anthropic/v1/messages/batches` — batch processing for multiple requests 📦
+
+Base paths:
+- OpenAI: http://localhost:9090/v1 🌐
+- Anthropic: http://localhost:9090/anthropic/v1 🌐
 
 ## 🎛️ Feature Control Headers
 
@@ -446,6 +456,131 @@ body: JSON.stringify({model:'GLM-4-6-API-V1', messages:[{role:'user', content:me
 if (stream) { /* handle SSE stream */ } else { const data = await response.json(); console.log(data.choices[0].message.content); }
 }
 ```
+
+## 🤖 Anthropic API Usage
+
+The server now supports Anthropic's API format alongside OpenAI's! This means you can use Anthropic's official SDKs and tools with your GLM models! 🚀
+
+### Anthropic SDK Examples
+
+**Python (Anthropic SDK)**
+```python
+from anthropic import Anthropic
+
+client = Anthropic(
+    api_key="your-api-key",
+    base_url="http://localhost:9090/anthropic/v1"
+)
+
+message = client.messages.create(
+    model="0727-360B-API",  # GLM-4.5
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "Hello, Claude!"}
+    ]
+)
+
+print(message.content[0].text)
+```
+
+**JavaScript (Anthropic SDK)**
+```javascript
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: 'your-api-key',
+  baseURL: 'http://localhost:9090/anthropic/v1',
+});
+
+const response = await anthropic.messages.create({
+  model: 'GLM-4-6-API-V1',  // GLM-4.6
+  max_tokens: 1024,
+  messages: [
+    { role: 'user', content: 'Hello, Claude!' }
+  ],
+});
+
+console.log(response.content[0].text);
+```
+
+**cURL (Anthropic format)**
+```bash
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "glm-4.5v",
+    "max_tokens": 1024,
+    "messages": [
+      {"role": "user", "content": "Hello, Claude!"}
+    ]
+  }'
+```
+
+### Token Counting
+
+Count tokens before making requests:
+
+```bash
+curl -X POST http://localhost:9090/anthropic/v1/messages/count_tokens \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "GLM-4-6-API-V1",
+    "messages": [
+      {"role": "user", "content": "Hello, how are you?"}
+    ]
+  }'
+```
+
+### Batch Processing
+
+Process multiple requests at once:
+
+```bash
+curl -X POST http://localhost:9090/anthropic/v1/messages/batches \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "requests": [
+      {
+        "custom_id": "request-1",
+        "params": {
+          "model": "GLM-4-6-API-V1",
+          "max_tokens": 1024,
+          "messages": [
+            {"role": "user", "content": "What is 2+2?"}
+          ]
+        }
+      },
+      {
+        "custom_id": "request-2",
+        "params": {
+          "model": "glm-4.5v",
+          "max_tokens": 1024,
+          "messages": [
+            {"role": "user", "content": "Describe this image"}
+          ]
+        }
+      }
+    ]
+  }'
+```
+
+### Model Mapping
+
+Your GLM models are exposed with their original IDs in the Anthropic format:
+- `0727-360B-API` → GLM-4.5 (text, code, tools)
+- `GLM-4-6-API-V1` → GLM-4.6 (text, code, tools, smartest!)
+- `glm-4.5v` → GLM-4.5V (multimodal: image, video, document, audio)
+
+### Authentication
+
+Anthropic endpoints accept either:
+- `x-api-key` header (Anthropic style)
+- `Authorization: Bearer` header (OpenAI style)
+
+Both work the same way! 🔑
 
 ## 🛠️ Troubleshooting
 

@@ -19,6 +19,18 @@
  * @version 2.0.0
  * @since 2024
  */
+
+// Import Anthropic API integration
+import {
+  handleAnthropicMessages,
+  handleAnthropicModels,
+  handleAnthropicCountTokens,
+  handleAnthropicMessageBatches,
+  setAnthropicHeaders as _setAnthropicHeaders,
+  validateAnthropicApiKey as _validateAnthropicApiKey
+} from "./anthropic.ts";
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
 declare global {
   interface ImportMeta {
     main: boolean;
@@ -141,11 +153,11 @@ interface UpstreamRequest {
     id: string;
     name: string;
     owned_by: string;
-    openai?: any;
+    openai?: Record<string, unknown>;
     urlIdx?: number;
-    info?: any;
-    actions?: any[];
-    tags?: any[];
+    info?: Record<string, unknown>;
+    actions?: Record<string, unknown>[];
+    tags?: Record<string, unknown>[];
   };
   tool_servers?: string[];
   variables?: Record<string, string>;
@@ -520,7 +532,7 @@ function debugLog(format: string, ...args: unknown[]): void {
   }
 }
 
-function recordRequestStats(startTime: number, path: string, status: number): void {
+function recordRequestStats(startTime: number, _path: string, status: number): void {
   const duration = Date.now() - startTime;
 
   stats.totalRequests++;
@@ -615,7 +627,7 @@ function getStatsData(): string {
   }
 }
 
-function getClientIP(request: Request): string {
+function _getClientIP(request: Request): string {
   const xff = request.headers.get("X-Forwarded-For");
   if (xff) {
     const ips = xff.split(",");
@@ -689,119 +701,128 @@ async function getAnonymousToken(): Promise<string> {
   }
 }
 
-// Call upstream API with headers
+/**
+ * 生成Z.ai API请求签名
+ * @param e "requestId,request_id,timestamp,timestamp,user_id,user_id"
+ * @param t 用户最新消息
+ * @param timestamp 时间戳 (毫秒)
+ * @returns { signature: string, timestamp: number }
+ */
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
+  const r = String(timestamp);
+  const i = `${e}|${t}|${r}`;
+  const n = Math.floor(timestamp / (5 * 60 * 1000));
+  const key = new TextEncoder().encode("junjie");
+
+  // 第一层 HMAC
+  const firstHmacKey = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const firstSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    firstHmacKey,
+    new TextEncoder().encode(String(n))
+  );
+  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 第二层 HMAC
+  const secondHmacKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(o),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const secondSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    secondHmacKey,
+    new TextEncoder().encode(i)
+  );
+  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  debugLog("签名生成成功: %s", signature);
+  return {
+      signature,
+      timestamp
+  };
+}
+
 async function callUpstreamWithHeaders(
   upstreamReq: UpstreamRequest,
   refererChatID: string,
   authToken: string
 ): Promise<Response> {
   try {
-    debugLog("Calling upstream API: %s", UPSTREAM_URL);
+    debugLog("调用上游API: %s", UPSTREAM_URL);
 
-    const hasMultimedia = upstreamReq.messages.some(msg =>
-      Array.isArray(msg.content) &&
-      msg.content.some(block =>
-        ['image_url', 'video_url', 'document_url', 'audio_url'].includes(block.type)
-      )
-    );
-
-    if (hasMultimedia) {
-      debugLog("🎯 Request contains multimedia data, sending to upstream...");
-
-      for (let i = 0; i < upstreamReq.messages.length; i++) {
-        const msg = upstreamReq.messages[i];
-        if (Array.isArray(msg.content)) {
-          for (let j = 0; j < msg.content.length; j++) {
-            const block = msg.content[j];
-
-            // Handle image
-            if (block.type === 'image_url' && block.image_url?.url) {
-              const url = block.image_url.url;
-              if (url.startsWith('data:image/')) {
-                const mimeMatch = url.match(/data:image\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                const sizeKB = Math.round(url.length * 0.75 / 1024);
-                debugLog("🖼️ Message[%d] Image[%d]: %s format, length: %d chars (~%dKB)",
-                  i, j, format, url.length, sizeKB);
-
-                if (sizeKB > 1000) {
-                  debugLog("⚠️ Image is large (%dKB), may cause upstream failures", sizeKB);
-                  debugLog("💡 Suggestion: compress images under 500KB");
-                } else if (sizeKB > 500) {
-                  debugLog("⚠️ Image somewhat large (%dKB), consider compression", sizeKB);
-                }
-              } else {
-                debugLog("🔗 Message[%d] Image[%d]: external URL - %s", i, j, url);
-              }
-            }
-
-            // Handle video
-            if (block.type === 'video_url' && block.video_url?.url) {
-              const url = block.video_url.url;
-              if (url.startsWith('data:video/')) {
-                const mimeMatch = url.match(/data:video\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎥 Message[%d] Video[%d]: %s format, length: %d chars",
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 Message[%d] Video[%d]: external URL - %s", i, j, url);
-              }
-            }
-
-            // Handle document
-            if (block.type === 'document_url' && block.document_url?.url) {
-              const url = block.document_url.url;
-              if (url.startsWith('data:application/')) {
-                const mimeMatch = url.match(/data:application\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("📄 Message[%d] Document[%d]: %s format, length: %d chars",
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 Message[%d] Document[%d]: external URL - %s", i, j, url);
-              }
-            }
-
-            // Handle audio
-            if (block.type === 'audio_url' && block.audio_url?.url) {
-              const url = block.audio_url.url;
-              if (url.startsWith('data:audio/')) {
-                const mimeMatch = url.match(/data:audio\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎵 Message[%d] Audio[%d]: %s format, length: %d chars",
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 Message[%d] Audio[%d]: external URL - %s", i, j, url);
-              }
-            }
-          }
-        }
+    // 1. 解码JWT获取user_id
+    let userId = "unknown";
+    try {
+      const tokenParts = authToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(new TextDecoder().decode(decodeBase64(tokenParts[1])));
+        userId = payload.id || userId;
+        debugLog("从JWT解析到 user_id: %s", userId);
       }
+    } catch (e) {
+      debugLog("解析JWT失败: %v", e);
     }
 
-    debugLog("Upstream request body: %s", JSON.stringify(upstreamReq));
+    // 2. 准备签名所需参数
+    const timestamp = Date.now();
+    const requestId = crypto.randomUUID();
+    const userMessage = upstreamReq.messages.filter(m => m.role === 'user').pop()?.content;
+    const lastMessageContent = typeof userMessage === 'string' ? userMessage :
+      (Array.isArray(userMessage) ? userMessage.find(c => c.type === 'text')?.text || "" : "");
 
-    const response = await fetch(UPSTREAM_URL, {
+    if (!lastMessageContent) {
+      throw new Error("无法获取用于签名的用户消息内容");
+    }
+
+    const e = `requestId,${requestId},timestamp,${timestamp},user_id,${userId}`;
+
+    // 3. 生成新签名
+    const { signature } = await generateSignature(e, lastMessageContent, timestamp);
+    debugLog("生成新版签名: %s", signature);
+
+    const reqBody = JSON.stringify(upstreamReq);
+    debugLog("上游请求体: %s", reqBody);
+
+    // 4. 构建带新参数的URL和Headers
+    const params = new URLSearchParams({
+        timestamp: timestamp.toString(),
+        requestId: requestId,
+        user_id: userId,
+        token: authToken,
+        current_url: `${ORIGIN_BASE}/c/${refererChatID}`,
+        pathname: `/c/${refererChatID}`,
+        signature_timestamp: timestamp.toString()
+    });
+    const fullURL = `${UPSTREAM_URL}?${params.toString()}`;
+
+    const response = await fetch(fullURL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
         "User-Agent": BROWSER_UA,
         "Authorization": `Bearer ${authToken}`,
-        "Accept-Language": "en-US",
-        "sec-ch-ua": SEC_CH_UA,
-        "sec-ch-ua-mobile": SEC_CH_UA_MOB,
-        "sec-ch-ua-platform": SEC_CH_UA_PLAT,
         "X-FE-Version": X_FE_VERSION,
+        "X-Signature": signature,
         "Origin": ORIGIN_BASE,
         "Referer": `${ORIGIN_BASE}/c/${refererChatID}`
       },
-      body: JSON.stringify(upstreamReq)
+      body: reqBody
     });
 
-    debugLog("Upstream response status: %d %s", response.status, response.statusText);
+    debugLog("上游响应状态: %d %s", response.status, response.statusText);
     return response;
   } catch (error) {
-    debugLog("Failed to call upstream: %v", error);
+    debugLog("调用上游失败: %v", error);
     throw error;
   }
 }
@@ -823,7 +844,7 @@ export function transformThinking(content: string, mode: "strip" | "thinking" | 
     let finalContent = "";
 
     // Try standard regex first (for complete <details> tags)
-    let detailsMatch = content.match(/<details[^>]*>(.*?)<\/details>/gs);
+    const detailsMatch = content.match(/<details[^>]*>(.*?)<\/details>/gs);
 
     if (detailsMatch) {
       // Process reasoning content
@@ -1338,7 +1359,7 @@ async function collectFullResponse(
                 usage: finalUsage
               };
             }
-          } catch (error) {
+          } catch (_error) {
             // ignore parse errors
           }
         }
@@ -1393,7 +1414,7 @@ async function handleIndex(request: Request): Promise<Response> {
   });
 }
 
-async function handleOptions(request: Request): Promise<Response> {
+function handleOptions(request: Request): Response {
   const headers = new Headers();
   setCORSHeaders(headers);
 
@@ -1404,7 +1425,7 @@ async function handleOptions(request: Request): Promise<Response> {
   return new Response("Not Found", { status: 404, headers });
 }
 
-async function handleModels(request: Request): Promise<Response> {
+function handleModels(request: Request): Response {
   const headers = new Headers();
   setCORSHeaders(headers);
 
@@ -1530,10 +1551,10 @@ async function handleChatCompletions(request: Request): Promise<Response> {
 
   // Parse JSON
   let req: OpenAIRequest;
-  let incomingBody: any = null;
+  let incomingBody: Record<string, unknown> | null = null;
   try {
     incomingBody = JSON.parse(body);
-    req = incomingBody as OpenAIRequest;
+    req = incomingBody as unknown as OpenAIRequest;
     debugLog("✅ JSON parsed successfully");
   } catch (error) {
     debugLog("JSON parse failed: %v", error);
@@ -1939,7 +1960,7 @@ async function handleDashboard(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardStats(request: Request): Promise<Response> {
+function handleDashboardStats(_request: Request): Response {
   return new Response(getStatsData(), {
     status: 200,
     headers: {
@@ -1948,7 +1969,7 @@ async function handleDashboardStats(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardRequests(request: Request): Promise<Response> {
+function handleDashboardRequests(_request: Request): Response {
   return new Response(getLiveRequestsData(), {
     status: 200,
     headers: {
@@ -2047,6 +2068,8 @@ if (isDenoDeploy) {
 
 // Handle HTTP connection (self-hosted/local)
 async function handleHttp(conn: Deno.Conn) {
+  // Note: Deno.serveHttp is deprecated but still works for now
+  // Future migration to Deno 2 will require refactoring this entire section
   const httpConn = Deno.serveHttp(conn);
 
   while (true) {
@@ -2058,61 +2081,85 @@ async function handleHttp(conn: Deno.Conn) {
     const startTime = Date.now();
     const userAgent = request.headers.get("User-Agent") || "";
 
-try {
-  // Routing
-  if (url.pathname === "/") {
-    const response = await handleIndex(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname.startsWith("/ui/")) {
-    const response = await handleStatic(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/v1/models") {
-    const response = await handleModels(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/v1/chat/completions") {
-    const response = await handleChatCompletions(request);
-    await respondWith(response);
-    // stats recorded inside handleChatCompletions
-  } else if (url.pathname === "/docs") {
-    const response = await handleDocs(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard" && DASHBOARD_ENABLED) {
-    const response = await handleDashboard(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/stats" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardStats(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardRequests(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else {
-    const response = await handleOptions(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+    try {
+      // Routing
+      if (url.pathname === "/") {
+        const response = await handleIndex(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname.startsWith("/ui/")) {
+        const response = await handleStatic(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/v1/models") {
+        const response = await handleModels(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/v1/chat/completions") {
+        const response = await handleChatCompletions(request);
+        await respondWith(response);
+        // stats recorded inside handleChatCompletions
+      } else if (url.pathname === "/docs") {
+        const response = await handleDocs(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard" && DASHBOARD_ENABLED) {
+        const response = await handleDashboard(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard/stats" && DASHBOARD_ENABLED) {
+        const response = await handleDashboardStats(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
+        const response = await handleDashboardRequests(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/anthropic/v1/messages") {
+        // Anthropic Messages API endpoint
+        const response = await handleAnthropicMessages(request, handleChatCompletions);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/anthropic/v1/models") {
+        // Anthropic Models API endpoint
+        const response = handleAnthropicModels();
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
+        // Anthropic Count Tokens API endpoint
+        const response = await handleAnthropicCountTokens(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/anthropic/v1/messages/batches") {
+        // Anthropic Message Batches API endpoint
+        const response = await handleAnthropicMessageBatches(request, handleChatCompletions);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else {
+        const response = await handleOptions(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      }
+    } catch (error) {
+      debugLog("Error handling request: %v", error);
+      const response = new Response("Internal Server Error", { status: 500 });
+      await respondWith(response);
+      recordRequestStats(startTime, url.pathname, 500);
+      addLiveRequest(request.method, url.pathname, 500, Date.now() - startTime, userAgent);
+    }
   }
-} catch (error) {
-  debugLog("Error handling request: %v", error);
-  const response = new Response("Internal Server Error", { status: 500 });
-  await respondWith(response);
-  recordRequestStats(startTime, url.pathname, 500);
-  addLiveRequest(request.method, url.pathname, 500, Date.now() - startTime, userAgent);
-}
-}
 }
 
 // Handle HTTP requests (Deno Deploy)
@@ -2159,6 +2206,30 @@ async function handleRequest(request: Request): Promise<Response> {
       return response;
     } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
       const response = await handleDashboardRequests(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname === "/anthropic/v1/messages") {
+      // Anthropic Messages API endpoint
+      const response = await handleAnthropicMessages(request, handleChatCompletions);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname === "/anthropic/v1/models") {
+      // Anthropic Models API endpoint
+      const response = handleAnthropicModels();
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
+      // Anthropic Count Tokens API endpoint
+      const response = await handleAnthropicCountTokens(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname === "/anthropic/v1/messages/batches") {
+      // Anthropic Message Batches API endpoint
+      const response = await handleAnthropicMessageBatches(request, handleChatCompletions);
       recordRequestStats(startTime, url.pathname, response.status);
       addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;
