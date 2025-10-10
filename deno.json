@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "gpt-tokenizer": "npm:gpt-tokenizer@^3.0.1"
+  }
+}

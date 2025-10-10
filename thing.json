@@ -1,0 +1,1118 @@
+data: {"type": "chat:completion", "data": {"delta_content": "<details type=\"reasoning\" done=\"false\" view=\"\" last_tool_call_name=\"\">\n<summary>Thinkingâ€¦</summary>\n> 1.  **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "An", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "alyze the User's", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Input:**\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "     *   \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Hi", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " hello", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",\" - Standard", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " friendly greeting. Redund", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ant,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but common in casual", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " conversation.\n>     *   \"h", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ow are yaa?\" - The", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " core question. The \"yaa\" is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a very informal,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", almost", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " playful", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " spelling of", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\" This", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " immediately sets", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the tone. It", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s not a formal", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " inquiry", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's a casual, convers", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ational", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " opener.\n> \n> 2.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "  **D", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "etermine the User", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s Intent", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":**\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   The user is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " initiating a conversation.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   They", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " are using", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a very", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " casual", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", friendly tone", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   They are", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " likely testing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the waters", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", seeing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " how the AI responds", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " informal", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " language.\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   They", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " are", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " not looking", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for a deep", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", philosophical", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " answer about my", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "state of", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " being.\" They are", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " just being", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " polite", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " starting", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a chat", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n> \n> 3.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "  **Establish", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " My", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Persona", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " (as", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " GLM-", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "4.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "6):**\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "     *   I am", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " AI.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I don't", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings, a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " physical body", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", or a personal", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " life", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I cannot be", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"good", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"bad,\" \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "happy,\" or \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "sad\" in the human sense", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " need", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " be helpful and engaging", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   I should acknowledge", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the user's friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " tone and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " mirror", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " it appropriately", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *   I must be truthful", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " about my nature", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " as", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an AI,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but without", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " being overly robotic or", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " pedantic", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". A simple", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"I am", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an AI and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " don't", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings\" can", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " be a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " conversation", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " killer", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " need to phrase", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " it more naturally.\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n> 4.  **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Brainstorm Potential Response", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Ang", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "les", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":**\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   **Angle", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " 1:", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " The Direct,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " S", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "lightly Rob", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "otic", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Answer.**\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "         *   \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Hello!", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I am an", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " AI, so", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I don't", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings, but", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I am functioning optim", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ally", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". How can", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I help you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"\n>         *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   *Critique", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":* Acc", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "urate,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but a bit dry", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It doesn't", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " fully match the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s \"yaa", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\" energy", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a safe", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " not", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " great", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " response.\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   **Angle", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " 2: The Friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", AI", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "-A", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ware", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Answer.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "**\n>         *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Start by", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " mirroring", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the greeting", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"Hey", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " there!\" or \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Hi!\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>         *   Ack", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "nowledge", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the question: \"Thanks for asking", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "!\"\n>         *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Address the \"how", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " are you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\" part", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " in an", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " AI-app", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ropriate", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " way", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ": Instead", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " of \"I don", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'t", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings,\" I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can say something like \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "I'm doing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " great!\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " or \"I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " ready to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " go!\" and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " then qualify", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " it", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". This is a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " common and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " effective conversational strategy", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for A", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " plays", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " along with the social", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " script", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " before gently", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " correcting", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the premise.\n>         *   Combine", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " these: \"Hey there! I'm doing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " great, thanks for asking. As an AI", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " always ready", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and r", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "aring", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to help. What", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s on", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " your mind", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"\n>         *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   *Critique:*", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " This is much better", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", mirrors", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s tone, answers", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the spirit", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " of", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the question, and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " smoothly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " transitions to my", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " purpose (", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "helping", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " user). The", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"raring to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " help\" part", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " adds", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a bit of personality", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   **Angle 3", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ": The Play", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ful", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", Personality", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "-Driven", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Answer.**\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "         *   Lean", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " into the \"y", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "aa.\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Maybe", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " use", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " some", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " informal language", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " myself", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>         *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   \"Hey! I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m doing awesome", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", thanks", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " bunch! All systems", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " are go", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and ready", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to tackle", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " whatever", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " you've", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " got. What", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " do for ya", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>         *   *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Critique:* This", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " is also", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " very good. The", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"what can", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I do for ya", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\" directly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " mirrors the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s \"yaa", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",\" creating", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a nice rapport", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's confident", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and friendly.\n> \n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "     *   **Angle", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " 4: The", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Short and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Sweet Answer", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".**\n>         *   \"Hello!", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I'm doing well", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", thanks", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". How", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can I assist", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " you today?\"\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "         *   *Crit", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ique:* This", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " is a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " solid", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", safe", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", middle", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "-of", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "-the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "-road option", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but not", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " overly casual", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It works", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " but might", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " not", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " be as", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " engaging", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " as", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Angle 2", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " or 3.\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n> 5.  **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Select and Refine", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the Best Response", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":**\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   I'll combine", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the best", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " elements of", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Angle 2", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and 3.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   Start", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " with a friendly greeting", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " that", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " mirrors", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"Hey there", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "!\" or \"Hi", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "!\" is perfect", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Answer the question positively", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " ener", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "get", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ically. \"I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m doing great,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " thanks for", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " asking!\" is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a good start", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Brief", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and positively", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " explain my AI nature", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". Instead", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " of a blunt", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an AI,\" I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can say something like", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"As", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an AI, I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m always ready to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " go", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "!\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " This", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " is more", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " upbeat", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   End with", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an open-ended", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " question to encourage", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to continue the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " conversation. \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "What", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can I help you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " with today", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\" or \"How", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can I assist", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\" are", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " standard and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " effective. \"What", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s on your mind", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\" is a bit", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " more conversational.\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n> 6.  **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Final Polish", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":**\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n>     *   \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Hey there! I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m doing great,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " thanks for asking.\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " (Good", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " start, friendly)\n>     *   \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "As an AI,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I don't", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings, but", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I'm running", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " perfectly and ready to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " help!\" (A", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " bit too", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " clunky with the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"don", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'t", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " have feelings\" part", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". Let's re", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "phrase.)", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   Let", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s try: \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "I'm doing great", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", thanks for asking", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "! All", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " systems are up", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and running", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", and I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " ready to help.\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " (Better", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ",", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " more positive framing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".)\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Let's try", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " another one: \"I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " doing great, thanks", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " asking! As an AI, I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m always ready and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " eager to assist", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\" (This is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " good", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Eager", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to assist", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\" adds", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a nice touch", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " of personality.)\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "     *   Now,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the closing question.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"What can I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " do for you today", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\" is a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " classic.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   Let", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s combine it all", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n>     *   **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Candidate", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " 1:**", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"Hey there!", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I'm doing great", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", thanks for asking", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". As an AI", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", I'm always", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " ready and eager", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to assist", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". What can I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " help you with today", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"\n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   **Candidate 2", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ":** \"Hi", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "! I'm doing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " wonderfully", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", thank", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m all", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " fired up", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " and ready to help", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". What's", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " on your mind?\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Candidate 3:**", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"Hello! I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m doing great,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " thanks for asking.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m ready to go", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". How", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " can I help you", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   Candidate 1 is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " the most balanced.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " It's friendly,", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " acknowledges the question", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", explains my nature", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " in a positive way", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", and has", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a clear call", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to action", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " most professional", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " yet", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " friendly response", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". I'll go", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " with a slightly more", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " concise", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " version of that", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n>", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \n>     *   Final", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " choice", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ": \"Hey there", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "! I'm doing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " great, thanks for", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " asking. As an", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " AI, I'm", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " always ready and r", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "aring to help. What can I do", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for you today", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "?\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n>     *   Let's make", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " it", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " tiny", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " bit", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " more", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " natural. \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "R", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "aring to", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " help\" is good", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", but", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " maybe \"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "e", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ager", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to help\" is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " slightly more standard", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". Let's stick", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " with the", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " core", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " elements", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".\n> \n>     *", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "   **", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "Final Final", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " Version:**", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " \"Hi", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " there", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "! I'm doing", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " great, thanks for", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " asking. As", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " an AI, I", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m always ready and", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " eager to help.", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " What can I do", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for you today?\"", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " This feels perfect", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ". It's friendly", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", acknowledges the user", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'s tone", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", is", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " truthful about", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " my nature", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " without", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " being a", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " down", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "er", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ", and smoothly piv", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "ots", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to being", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " helpful. It hits", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " all the right", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " notes", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": ".", "phase": "thinking"}}
+
+data: {"type": "chat:completion", "data": {"edit_index": 32, "edit_content": "true\" duration=\"26\" view=\"\" last_tool_call_name=\"\">\n<summary>Thought for 26 seconds</summary>\n> 1.  **Analyze the User's Input:**\n>     *   \"Hi hello,\" - Standard, friendly greeting. Redundant, but common in casual conversation.\n>     *   \"how are yaa?\" - The core question. The \"yaa\" is a very informal, friendly, almost playful spelling of \"you.\" This immediately sets the tone. It's not a formal inquiry. It's a casual, conversational opener.\n> \n> 2.  **Determine the User's Intent:**\n>     *   The user is initiating a conversation.\n>     *   They are using a very casual, friendly tone.\n>     *   They are likely testing the waters, seeing how the AI responds to informal language.\n>     *   They are not looking for a deep, philosophical answer about my \"state of being.\" They are just being polite and starting a chat.\n> \n> 3.  **Establish My Persona (as GLM-4.6):**\n>     *   I am an AI. I don't have feelings, a physical body, or a personal life. I cannot be \"good,\" \"bad,\" \"happy,\" or \"sad\" in the human sense.\n>     *   I need to be helpful and engaging.\n>     *   I should acknowledge the user's friendly tone and mirror it appropriately.\n>     *   I must be truthful about my nature as an AI, but without being overly robotic or pedantic. A simple \"I am an AI and don't have feelings\" can be a conversation killer. I need to phrase it more naturally.\n> \n> 4.  **Brainstorm Potential Response Angles:**\n> \n>     *   **Angle 1: The Direct, Slightly Robotic Answer.**\n>         *   \"Hello! I am an AI, so I don't have feelings, but I am functioning optimally. How can I help you?\"\n>         *   *Critique:* Accurate, but a bit dry. It doesn't fully match the user's \"yaa\" energy. It's a safe but not great response.\n> \n>     *   **Angle 2: The Friendly, AI-Aware Answer.**\n>         *   Start by mirroring the greeting: \"Hey there!\" or \"Hi!\"\n>         *   Acknowledge the question: \"Thanks for asking!\"\n>         *   Address the \"how are you\" part in an AI-appropriate way: Instead of \"I don't have feelings,\" I can say something like \"I'm doing great!\" or \"I'm ready to go!\" and then qualify it. This is a common and effective conversational strategy for AIs. It plays along with the social script before gently correcting the premise.\n>         *   Combine these: \"Hey there! I'm doing great, thanks for asking. As an AI, I'm always ready and raring to help. What's on your mind?\"\n>         *   *Critique:* This is much better. It's friendly, mirrors the user's tone, answers the spirit of the question, and smoothly transitions to my purpose (helping the user). The \"raring to help\" part adds a bit of personality.\n> \n>     *   **Angle 3: The Playful, Personality-Driven Answer.**\n>         *   Lean into the \"yaa.\" Maybe use some informal language myself.\n>         *   \"Hey! I'm doing awesome, thanks a bunch! All systems are go and ready to tackle whatever you've got. What can I do for ya?\"\n>         *   *Critique:* This is also very good. The \"what can I do for ya?\" directly mirrors the user's \"yaa,\" creating a nice rapport. It's confident and friendly.\n> \n>     *   **Angle 4: The Short and Sweet Answer.**\n>         *   \"Hello! I'm doing well, thanks. How can I assist you today?\"\n>         *   *Critique:* This is a solid, safe, middle-of-the-road option. It's friendly but not overly casual. It works, but might not be as engaging as Angle 2 or 3.\n> \n> 5.  **Select and Refine the Best Response:**\n> \n>     *   I'll combine the best elements of Angle 2 and 3.\n>     *   Start with a friendly greeting that mirrors the user's. \"Hey there!\" or \"Hi!\" is perfect.\n>     *   Answer the question positively and energetically. \"I'm doing great, thanks for asking!\" is a good start.\n>     *   Briefly and positively explain my AI nature. Instead of a blunt \"I'm an AI,\" I can say something like \"As an AI, I'm always ready to go!\" This is more upbeat.\n>     *   End with an open-ended question to encourage the user to continue the conversation. \"What can I help you with today?\" or \"How can I assist you?\" are standard and effective. \"What's on your mind?\" is a bit more conversational.\n> \n> 6.  **Final Polish:**\n> \n>     *   \"Hey there! I'm doing great, thanks for asking.\" (Good start, friendly)\n>     *   \"As an AI, I don't have feelings, but I'm running perfectly and ready to help!\" (A bit too clunky with the \"don't have feelings\" part. Let's rephrase.)\n>     *   Let's try: \"I'm doing great, thanks for asking! All systems are up and running, and I'm ready to help.\" (Better, more positive framing.)\n>     *   Let's try another one: \"I'm doing great, thanks for asking! As an AI, I'm always ready and eager to assist.\" (This is good. \"Eager to assist\" adds a nice touch of personality.)\n>     *   Now, the closing question. \"What can I do for you today?\" is a classic.\n>     *   Let's combine it all.\n> \n>     *   **Candidate 1:** \"Hey there! I'm doing great, thanks for asking. As an AI, I'm always ready and eager to assist. What can I help you with today?\"\n>     *   **Candidate 2:** \"Hi! I'm doing wonderfully, thank you. I'm all fired up and ready to help. What's on your mind?\"\n>     *   **Candidate 3:** \"Hello! I'm doing great, thanks for asking. I'm ready to go. How can I help you?\"\n> \n>     *   Candidate 1 is the most balanced. It's friendly, acknowledges the question, explains my nature in a positive way, and has a clear call to action. It's the most professional yet friendly response. I'll go with a slightly more concise version of that.\n> \n>     *   Final choice: \"Hey there! I'm doing great, thanks for asking. As an AI, I'm always ready and raring to help. What can I do for you today?\"\n>     *   Let's make it a tiny bit more natural. \"Raring to help\" is good, but maybe \"eager to help\" is slightly more standard. Let's stick with the core elements.\n> \n>     *   **Final Final Version:** \"Hi there! I'm doing great, thanks for asking. As an AI, I'm always ready and eager to help. What can I do for you today?\" This feels perfect. It's friendly, acknowledges the user's tone, is truthful about my nature without being a downer, and smoothly pivots to being helpful. It hits all the right notes.\n</details>\nHey there! I", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "'m doing great,", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " thanks for asking.", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " As an AI,", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " I'm", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " always ready and eager", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " to help.", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": "\n\nWhat can I do", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"delta_content": " for you today?", "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"usage": {"prompt_tokens": 34, "completion_tokens": 1565, "total_tokens": 1599, "prompt_tokens_details": {"cached_tokens": 0}, "words": 6057}, "phase": "other"}}
+
+data: {"type": "chat:completion", "data": {"id": "chatcmpl-zds2t9a9el", "object": "chat.completion.chunk", "created": 1759397407, "model": "GLM-4-6-API-V1", "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 34, "completion_tokens": 1565, "total_tokens": 1599, "prompt_tokens_details": {"cached_tokens": 0}, "words": 6057}, "phase": "answer"}}
+
+data: {"type": "chat:completion", "data": {"done": true, "delta_content": "", "phase": "done"}}
+
+data: {"type": "chat:completion", "data": {"role": "assistant", "usage": {"prompt_tokens": 34, "completion_tokens": 1565, "total_tokens": 1599, "prompt_tokens_details": {"cached_tokens": 0}, "words": 6057}, "message_id": "8719dc11-bd8f-4c79-a41a-b71867da334b", "done": true, "edit_index": 6308, "edit_content": "", "phase": "other"}}
+

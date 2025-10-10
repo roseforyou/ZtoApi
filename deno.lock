@@ -1,0 +1,21 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:gpt-tokenizer@*": "3.0.1",
+    "npm:gpt-tokenizer@^3.0.1": "3.0.1"
+  },
+  "npm": {
+    "gpt-tokenizer@3.0.1": {
+      "integrity": "sha512-5jdaspBq/w4sWw322SvQj1Fku+CN4OAfYZeeEg8U7CWtxBz+zkxZ3h0YOHD43ee+nZYZ5Ud70HRN0ANcdIj4qg=="
+    }
+  },
+  "remote": {
+    "https://deno.land/std@0.224.0/encoding/_util.ts": "beacef316c1255da9bc8e95afb1fa56ed69baef919c88dc06ae6cb7a6103d376",
+    "https://deno.land/std@0.224.0/encoding/base64.ts": "dd59695391584c8ffc5a296ba82bcdba6dd8a84d41a6a539fbee8e5075286eaf"
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:gpt-tokenizer@^3.0.1"
+    ]
+  }
+}

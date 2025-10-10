@@ -1,25 +1,33 @@
-
 /**
- * ZtoApi - OpenAI兼容API代理服务器
- * 
- * 功能概述：
- * - 为 Z.ai 的 GLM-4.5 模型提供 OpenAI 兼容的 API 接口
- * - 支持流式和非流式响应模式
- * - 提供实时监控 Dashboard 功能
- * - 支持匿名 token 自动获取
- * - 智能处理模型思考过程展示
- * - 完整的请求统计和错误处理
- * 
- * 技术栈：
- * - Deno 原生 HTTP API
- * - TypeScript 类型安全
- * - Server-Sent Events (SSE) 流式传输
- * - 支持 Deno Deploy 和自托管部署
- * 
+ * ZtoApi - OpenAI-compatible API proxy server
+ *
+ * Overview:
+ * - Provides an OpenAI-compatible API interface for Z.ai's GLM-4.5 models
+ * - Supports streaming and non-streaming responses
+ * - Includes a real-time monitoring Dashboard
+ * - Supports automatic anonymous token fetching
+ * - Intelligently handles model "thinking" content display
+ * - Complete request statistics and error handling
+ *
+ * Tech stack:
+ * - Deno native HTTP API
+ * - TypeScript for type safety
+ * - Server-Sent Events (SSE) streaming
+ * - Supports Deno Deploy and self-hosted deployment
+ *
  * @author ZtoApi Team
  * @version 2.0.0
  * @since 2024
  */
+
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
+declare global {
+  interface ImportMeta {
+    main: boolean;
+  }
+}
+
 declare namespace Deno {
   interface Conn {
     readonly rid: number;
@@ -29,42 +37,45 @@ declare namespace Deno {
     write(p: Uint8Array): Promise<number>;
     close(): void;
   }
-  
+
   interface Addr {
     hostname: string;
     port: number;
     transport: string;
   }
-  
+
   interface Listener extends AsyncIterable<Conn> {
     readonly addr: Addr;
     accept(): Promise<Conn>;
     close(): void;
     [Symbol.asyncIterator](): AsyncIterableIterator<Conn>;
   }
-  
+
   interface HttpConn {
     nextRequest(): Promise<RequestEvent | null>;
     [Symbol.asyncIterator](): AsyncIterableIterator<RequestEvent>;
   }
-  
+
   interface RequestEvent {
     request: Request;
     respondWith(r: Response | Promise<Response>): Promise<void>;
   }
-  
+
   function listen(options: { port: number }): Listener;
   function serveHttp(conn: Conn): HttpConn;
   function serve(handler: (request: Request) => Promise<Response>): void;
-  
+
   namespace env {
     function get(key: string): string | undefined;
   }
+
+  export function readTextFile(path: string): Promise<string>;
+  export function readFile(path: string): Promise<Uint8Array>;
 }
 
 /**
- * 请求统计信息接口
- * 用于跟踪API调用的各项指标
+ * Request statistics interface
+ * Tracks metrics for API calls
  */
 interface RequestStats {
   totalRequests: number;
@@ -75,8 +86,7 @@ interface RequestStats {
 }
 
 /**
- * 实时请求信息接口
- * 用于Dashboard显示最近的API请求记录
+ * Live request info for Dashboard display
  */
 interface LiveRequest {
   id: string;
@@ -90,8 +100,7 @@ interface LiveRequest {
 }
 
 /**
- * OpenAI兼容请求结构
- * 标准的聊天完成API请求格式
+ * OpenAI-compatible request structure (chat completions)
  */
 interface OpenAIRequest {
   model: string;
@@ -102,8 +111,8 @@ interface OpenAIRequest {
 }
 
 /**
- * 聊天消息结构
- * 支持全方位多模态内容：文本、图像、视频、文档
+ * Chat message structure
+ * Supports multimodal content: text, image, video, document, audio
  */
 interface Message {
   role: string;
@@ -115,11 +124,11 @@ interface Message {
     document_url?: {url: string};
     audio_url?: {url: string};
   }>;
+  reasoning_content?: string;
 }
 
 /**
- * 上游服务请求结构
- * 向Z.ai服务发送的请求格式
+ * Upstream request structure (to Z.ai)
  */
 interface UpstreamRequest {
   stream: boolean;
@@ -135,18 +144,18 @@ interface UpstreamRequest {
     id: string;
     name: string;
     owned_by: string;
-    openai?: any;
+    openai?: Record<string, unknown>;
     urlIdx?: number;
-    info?: any;
-    actions?: any[];
-    tags?: any[];
+    info?: Record<string, unknown>;
+    actions?: Record<string, unknown>[];
+    tags?: Record<string, unknown>[];
   };
   tool_servers?: string[];
   variables?: Record<string, string>;
 }
 
 /**
- * OpenAI兼容响应结构
+ * OpenAI-compatible response structure
  */
 interface OpenAIResponse {
   id: string;
@@ -167,6 +176,7 @@ interface Choice {
 interface Delta {
   role?: string;
   content?: string;
+  reasoning_content?: string;
 }
 
 interface Usage {
@@ -176,12 +186,14 @@ interface Usage {
 }
 
 /**
- * 上游SSE数据结构
+ * Upstream SSE data structure
  */
 interface UpstreamData {
   type: string;
   data: {
     delta_content: string;
+    edit_content?: string;  // Contains complete thinking block when phase changes
+    edit_index?: number;
     phase: string;
     done: boolean;
     usage?: Usage;
@@ -211,16 +223,22 @@ interface Model {
 }
 
 /**
- * 配置常量定义
+ * Configuration constants
  */
 
-// 思考内容处理策略: strip-去除<details>标签, think-转为<thinking>标签, raw-保留原样
-const THINK_TAGS_MODE = "strip";
+// Thinking content handling mode:
+// - "strip": remove <details> tags and show only content
+// - "thinking": convert <details> to <thinking> tags
+// - "think": convert <details> to <think> tags
+// - "raw": keep as-is
+// - "separate": separate reasoning into reasoning_content field
+const THINK_TAGS_MODE = "think"; // options: "strip", "thinking", "think", "raw", "separate"
 
-// 伪装前端头部（来自抓包分析）
-const X_FE_VERSION = "prod-fe-1.0.70";
-const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0";
-const SEC_CH_UA = "\"Not;A=Brand\";v=\"99\", \"Microsoft Edge\";v=\"139\", \"Chromium\";v=\"139\"";
+// Spoofed front-end headers (observed from capture)
+// Updated to match capture in example.json
+const X_FE_VERSION = "prod-fe-1.0.95";
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0";
+const SEC_CH_UA = "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Microsoft Edge\";v=\"140\"";
 const SEC_CH_UA_MOB = "?0";
 const SEC_CH_UA_PLAT = "\"Windows\"";
 const ORIGIN_BASE = "https://chat.z.ai";
@@ -228,19 +246,19 @@ const ORIGIN_BASE = "https://chat.z.ai";
 const ANON_TOKEN_ENABLED = true;
 
 /**
- * 环境变量配置
+ * Environment variable configuration
  */
 const UPSTREAM_URL = Deno.env.get("UPSTREAM_URL") || "https://chat.z.ai/api/chat/completions";
 const DEFAULT_KEY = Deno.env.get("DEFAULT_KEY") || "sk-your-key";
 const ZAI_TOKEN = Deno.env.get("ZAI_TOKEN") || "";
 
 /**
- * 支持的模型配置
+ * Supported model configuration
  */
 interface ModelConfig {
-  id: string;           // OpenAI API中的模型ID
-  name: string;         // 显示名称
-  upstreamId: string;   // Z.ai上游的模型ID
+  id: string;           // Model ID as exposed by API
+  name: string;         // Display name
+  upstreamId: string;   // Upstream Z.ai model ID
   capabilities: {
     vision: boolean;
     mcp: boolean;
@@ -270,6 +288,21 @@ const SUPPORTED_MODELS: ModelConfig[] = [
     }
   },
   {
+    id: "GLM-4-6-API-V1",
+    name: "GLM-4.6",
+    upstreamId: "GLM-4-6-API-V1",
+    capabilities: {
+      vision: false,
+      mcp: true,
+      thinking: true
+    },
+    defaultParams: {
+      top_p: 0.95,
+      temperature: 0.6,
+      max_tokens: 195000
+    }
+  },
+  {
     id: "glm-4.5v",
     name: "GLM-4.5V",
     upstreamId: "glm-4.5v",
@@ -285,67 +318,69 @@ const SUPPORTED_MODELS: ModelConfig[] = [
   }
 ];
 
-// 默认模型
+// Default model
 const DEFAULT_MODEL = SUPPORTED_MODELS[0];
 
-// 根据模型ID获取配置
+// Get model configuration by ID
 function getModelConfig(modelId: string): ModelConfig {
-  // 标准化模型ID，处理Cherry Studio等客户端的大小写差异
+  // Normalize model ID to handle case differences from various clients
   const normalizedModelId = normalizeModelId(modelId);
   const found = SUPPORTED_MODELS.find(m => m.id === normalizedModelId);
-  
+
   if (!found) {
-    debugLog("⚠️ 未找到模型配置: %s (标准化后: %s)，使用默认模型: %s", 
+    debugLog("⚠️ Model config not found: %s (normalized: %s). Using default: %s", 
       modelId, normalizedModelId, DEFAULT_MODEL.name);
   }
-  
+
   return found || DEFAULT_MODEL;
 }
 
 /**
- * 标准化模型ID，处理不同客户端的命名差异
- * Cherry Studio等客户端可能使用不同的大小写格式
+ * Normalize model ID to handle different client naming formats
  */
 function normalizeModelId(modelId: string): string {
   const normalized = modelId.toLowerCase().trim();
-  
-  // 处理常见的模型ID映射
+ 
   const modelMappings: Record<string, string> = {
     'glm-4.5v': 'glm-4.5v',
     'glm4.5v': 'glm-4.5v',
     'glm_4.5v': 'glm-4.5v',
-    'gpt-4-vision-preview': 'glm-4.5v',  // 向后兼容
+    'gpt-4-vision-preview': 'glm-4.5v',  // backward compatibility
     '0727-360b-api': '0727-360B-API',
     'glm-4.5': '0727-360B-API',
     'glm4.5': '0727-360B-API',
     'glm_4.5': '0727-360B-API',
-    'gpt-4': '0727-360B-API'  // 向后兼容
+    'gpt-4': '0727-360B-API',  // backward compatibility
+    // GLM-4.6 mappings (from example requests)
+    'glm-4.6': 'GLM-4-6-API-V1',
+    'glm4.6': 'GLM-4-6-API-V1',
+    'glm_4.6': 'GLM-4-6-API-V1',
+    'glm-4-6-api-v1': 'GLM-4-6-API-V1',
+    'glm-4-6': 'GLM-4-6-API-V1'
   };
-  
+ 
   const mapped = modelMappings[normalized];
   if (mapped) {
-    debugLog("🔄 模型ID映射: %s → %s", modelId, mapped);
+    debugLog("🔄 Model ID mapping: %s → %s", modelId, mapped);
     return mapped;
   }
-  
+ 
   return normalized;
 }
 
 /**
- * 处理和验证全方位多模态消息
- * 支持图像、视频、文档、音频等多种媒体类型
+ * Process and validate multimodal messages
+ * Supports image, video, document, audio types
  */
 function processMessages(messages: Message[], modelConfig: ModelConfig): Message[] {
   const processedMessages: Message[] = [];
-  
+
   for (const message of messages) {
     const processedMessage: Message = { ...message };
-    
-    // 检查是否为多模态消息
+
     if (Array.isArray(message.content)) {
-      debugLog("检测到多模态消息，内容块数量: %d", message.content.length);
-      
-      // 统计各种媒体类型
+      debugLog("Detected multimodal message, blocks: %d", message.content.length);
+
       const mediaStats = {
         text: 0,
         images: 0,
@@ -354,27 +389,26 @@ function processMessages(messages: Message[], modelConfig: ModelConfig): Message
         audios: 0,
         others: 0
       };
-      
-      // 验证模型是否支持多模态
+
       if (!modelConfig.capabilities.vision) {
-        debugLog("警告: 模型 %s 不支持多模态，但收到了多模态消息", modelConfig.name);
-        // 只保留文本内容
+        debugLog("Warning: Model %s does not support multimodal content but received it", modelConfig.name);
+        // Keep only text blocks
         const textContent = message.content
           .filter(block => block.type === 'text')
           .map(block => block.text)
           .join('\n');
         processedMessage.content = textContent;
       } else {
-        // GLM-4.5V 支持全方位多模态，处理所有内容类型
+        // GLM-4.5V supports full multimodal handling
         for (const block of message.content) {
           switch (block.type) {
             case 'text':
               if (block.text) {
                 mediaStats.text++;
-                debugLog("📝 文本内容，长度: %d", block.text.length);
+                debugLog("📝 Text block length: %d", block.text.length);
               }
               break;
-              
+
             case 'image_url':
               if (block.image_url?.url) {
                 mediaStats.images++;
@@ -382,15 +416,15 @@ function processMessages(messages: Message[], modelConfig: ModelConfig): Message
                 if (url.startsWith('data:image/')) {
                   const mimeMatch = url.match(/data:image\/([^;]+)/);
                   const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                  debugLog("🖼️ 图像数据: %s格式, 大小: %d字符", format, url.length);
+                  debugLog("🖼️ Image data: %s format, size: %d chars", format, url.length);
                 } else if (url.startsWith('http')) {
-                  debugLog("🔗 图像URL: %s", url);
+                  debugLog("🔗 Image URL: %s", url);
                 } else {
-                  debugLog("⚠️ 未知图像格式: %s", url.substring(0, 50));
+                  debugLog("⚠️ Unknown image format: %s", url.substring(0, 50));
                 }
               }
               break;
-              
+
             case 'video_url':
               if (block.video_url?.url) {
                 mediaStats.videos++;
@@ -398,15 +432,15 @@ function processMessages(messages: Message[], modelConfig: ModelConfig): Message
                 if (url.startsWith('data:video/')) {
                   const mimeMatch = url.match(/data:video\/([^;]+)/);
                   const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                  debugLog("🎥 视频数据: %s格式, 大小: %d字符", format, url.length);
+                  debugLog("🎥 Video data: %s format, size: %d chars", format, url.length);
                 } else if (url.startsWith('http')) {
-                  debugLog("🔗 视频URL: %s", url);
+                  debugLog("🔗 Video URL: %s", url);
                 } else {
-                  debugLog("⚠️ 未知视频格式: %s", url.substring(0, 50));
+                  debugLog("⚠️ Unknown video format: %s", url.substring(0, 50));
                 }
               }
               break;
-              
+
             case 'document_url':
               if (block.document_url?.url) {
                 mediaStats.documents++;
@@ -414,15 +448,15 @@ function processMessages(messages: Message[], modelConfig: ModelConfig): Message
                 if (url.startsWith('data:application/')) {
                   const mimeMatch = url.match(/data:application\/([^;]+)/);
                   const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                  debugLog("📄 文档数据: %s格式, 大小: %d字符", format, url.length);
+                  debugLog("📄 Document data: %s format, size: %d chars", format, url.length);
                 } else if (url.startsWith('http')) {
-                  debugLog("🔗 文档URL: %s", url);
+                  debugLog("🔗 Document URL: %s", url);
                 } else {
-                  debugLog("⚠️ 未知文档格式: %s", url.substring(0, 50));
+                  debugLog("⚠️ Unknown document format: %s", url.substring(0, 50));
                 }
               }
               break;
-              
+
             case 'audio_url':
               if (block.audio_url?.url) {
                 mediaStats.audios++;
@@ -430,44 +464,43 @@ function processMessages(messages: Message[], modelConfig: ModelConfig): Message
                 if (url.startsWith('data:audio/')) {
                   const mimeMatch = url.match(/data:audio\/([^;]+)/);
                   const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                  debugLog("🎵 音频数据: %s格式, 大小: %d字符", format, url.length);
+                  debugLog("🎵 Audio data: %s format, size: %d chars", format, url.length);
                 } else if (url.startsWith('http')) {
-                  debugLog("🔗 音频URL: %s", url);
+                  debugLog("🔗 Audio URL: %s", url);
                 } else {
-                  debugLog("⚠️ 未知音频格式: %s", url.substring(0, 50));
+                  debugLog("⚠️ Unknown audio format: %s", url.substring(0, 50));
                 }
               }
               break;
-              
+
             default:
               mediaStats.others++;
-              debugLog("❓ 未知内容类型: %s", block.type);
+              debugLog("❓ Unknown block type: %s", block.type);
           }
         }
-        
-        // 输出统计信息
+
         const totalMedia = mediaStats.images + mediaStats.videos + mediaStats.documents + mediaStats.audios;
         if (totalMedia > 0) {
-          debugLog("🎯 多模态内容统计: 文本(%d) 图像(%d) 视频(%d) 文档(%d) 音频(%d)", 
+          debugLog("🎯 Multimodal stats: text(%d) images(%d) videos(%d) documents(%d) audio(%d)",
             mediaStats.text, mediaStats.images, mediaStats.videos, mediaStats.documents, mediaStats.audios);
         }
       }
     } else if (typeof message.content === 'string') {
-      debugLog("📝 纯文本消息，长度: %d", message.content.length);
+      debugLog("📝 Plain text message, length: %d", message.content.length);
     }
-    
+
     processedMessages.push(processedMessage);
   }
-  
+
   return processedMessages;
 }
 
-const DEBUG_MODE = Deno.env.get("DEBUG_MODE") !== "false"; // 默认为true
-const DEFAULT_STREAM = Deno.env.get("DEFAULT_STREAM") !== "false"; // 默认为true
-const DASHBOARD_ENABLED = Deno.env.get("DASHBOARD_ENABLED") !== "false"; // 默认为true
+const DEBUG_MODE = Deno.env.get("DEBUG_MODE") !== "false"; // default true
+const DEFAULT_STREAM = Deno.env.get("DEFAULT_STREAM") !== "false"; // default true
+const DASHBOARD_ENABLED = Deno.env.get("DASHBOARD_ENABLED") !== "false"; // default true
 
 /**
- * 全局状态变量
+ * Global state
  */
 
 let stats: RequestStats = {
@@ -481,7 +514,7 @@ let stats: RequestStats = {
 let liveRequests: LiveRequest[] = [];
 
 /**
- * 工具函数
+ * Utility functions
  */
 
 function debugLog(format: string, ...args: unknown[]): void {
@@ -490,19 +523,18 @@ function debugLog(format: string, ...args: unknown[]): void {
   }
 }
 
-function recordRequestStats(startTime: number, path: string, status: number): void {
+function recordRequestStats(startTime: number, _path: string, status: number): void {
   const duration = Date.now() - startTime;
-  
+
   stats.totalRequests++;
   stats.lastRequestTime = new Date();
-  
+
   if (status >= 200 && status < 300) {
     stats.successfulRequests++;
   } else {
     stats.failedRequests++;
   }
-  
-  // 更新平均响应时间
+
   if (stats.totalRequests > 0) {
     const totalDuration = stats.averageResponseTime * (stats.totalRequests - 1) + duration;
     stats.averageResponseTime = totalDuration / stats.totalRequests;
@@ -522,10 +554,9 @@ function addLiveRequest(method: string, path: string, status: number, duration: 
     userAgent,
     model
   };
-  
+
   liveRequests.push(request);
-  
-  // 只保留最近的100条请求
+
   if (liveRequests.length > 100) {
     liveRequests = liveRequests.slice(1);
   }
@@ -533,13 +564,11 @@ function addLiveRequest(method: string, path: string, status: number, duration: 
 
 function getLiveRequestsData(): string {
   try {
-    // 确保liveRequests是数组
     if (!Array.isArray(liveRequests)) {
-      debugLog("liveRequests不是数组，重置为空数组");
+      debugLog("liveRequests is not an array, resetting to []");
       liveRequests = [];
     }
-    
-    // 确保返回的数据格式与前端期望的一致
+
     const requestData = liveRequests.map(req => ({
       id: req.id || "",
       timestamp: req.timestamp || new Date(),
@@ -549,19 +578,18 @@ function getLiveRequestsData(): string {
       duration: req.duration || 0,
       user_agent: req.userAgent || ""
     }));
-    
+
     return JSON.stringify(requestData);
   } catch (error) {
-    debugLog("获取实时请求数据失败: %v", error);
+    debugLog("Failed to get live requests data: %v", error);
     return JSON.stringify([]);
   }
 }
 
 function getStatsData(): string {
   try {
-    // 确保stats对象存在
     if (!stats) {
-      debugLog("stats对象不存在，使用默认值");
+      debugLog("stats object missing, using defaults");
       stats = {
         totalRequests: 0,
         successfulRequests: 0,
@@ -570,18 +598,17 @@ function getStatsData(): string {
         averageResponseTime: 0
       };
     }
-    
-    // 确保返回的数据格式与前端期望的一致
+
     const statsData = {
       totalRequests: stats.totalRequests || 0,
       successfulRequests: stats.successfulRequests || 0,
       failedRequests: stats.failedRequests || 0,
       averageResponseTime: stats.averageResponseTime || 0
     };
-    
+
     return JSON.stringify(statsData);
   } catch (error) {
-    debugLog("获取统计数据失败: %v", error);
+    debugLog("Failed to get stats data: %v", error);
     return JSON.stringify({
       totalRequests: 0,
       successfulRequests: 0,
@@ -591,8 +618,7 @@ function getStatsData(): string {
   }
 }
 
-function getClientIP(request: Request): string {
-  // 检查X-Forwarded-For头
+function _getClientIP(request: Request): string {
   const xff = request.headers.get("X-Forwarded-For");
   if (xff) {
     const ips = xff.split(",");
@@ -600,14 +626,13 @@ function getClientIP(request: Request): string {
       return ips[0].trim();
     }
   }
-  
-  // 检查X-Real-IP头
+
   const xri = request.headers.get("X-Real-IP");
   if (xri) {
     return xri;
   }
-  
-  // 对于Deno Deploy，我们无法直接获取RemoteAddr，返回一个默认值
+
+  // For Deno Deploy we can't read remoteAddr; return unknown
   return "unknown";
 }
 
@@ -619,12 +644,19 @@ function setCORSHeaders(headers: Headers): void {
 }
 
 function validateApiKey(authHeader: string | null): boolean {
+  // Accept a valid Bearer token if present.
+  // Backwards-compatible: allow DEFAULT_KEY, configured ZAI_TOKEN, or any JWT-like/long token
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return false;
   }
-  
+ 
   const apiKey = authHeader.substring(7);
-  return apiKey === DEFAULT_KEY;
+  if (apiKey === DEFAULT_KEY) return true;
+  if (ZAI_TOKEN && apiKey === ZAI_TOKEN) return true;
+  // Accept typical JWTs (three parts separated by '.') or long opaque tokens seen in captures
+  if (apiKey.split('.').length === 3) return true;
+  if (apiKey.length > 30) return true;
+  return false;
 }
 
 async function getAnonymousToken(): Promise<string> {
@@ -634,7 +666,7 @@ async function getAnonymousToken(): Promise<string> {
       headers: {
         "User-Agent": BROWSER_UA,
         "Accept": "*/*",
-        "Accept-Language": "zh-CN,zh;q=0.9",
+        "Accept-Language": "en-US,en;q=0.9",
         "X-FE-Version": X_FE_VERSION,
         "sec-ch-ua": SEC_CH_UA,
         "sec-ch-ua-mobile": SEC_CH_UA_MOB,
@@ -643,134 +675,141 @@ async function getAnonymousToken(): Promise<string> {
         "Referer": `${ORIGIN_BASE}/`
       }
     });
-    
+
     if (!response.ok) {
       throw new Error(`Anonymous token request failed with status ${response.status}`);
     }
-    
+
     const data = await response.json() as { token: string };
     if (!data.token) {
       throw new Error("Anonymous token is empty");
     }
-    
+
     return data.token;
   } catch (error) {
-    debugLog("获取匿名token失败: %v", error);
+    debugLog("Failed to obtain anonymous token: %v", error);
     throw error;
   }
 }
 
-// 调用上游API
+/**
+ * 生成Z.ai API请求签名
+ * @param e "requestId,request_id,timestamp,timestamp,user_id,user_id"
+ * @param t 用户最新消息
+ * @param timestamp 时间戳 (毫秒)
+ * @returns { signature: string, timestamp: number }
+ */
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
+  const r = String(timestamp);
+  const i = `${e}|${t}|${r}`;
+  const n = Math.floor(timestamp / (5 * 60 * 1000));
+  const key = new TextEncoder().encode("junjie");
+
+  // 第一层 HMAC
+  const firstHmacKey = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const firstSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    firstHmacKey,
+    new TextEncoder().encode(String(n))
+  );
+  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 第二层 HMAC
+  const secondHmacKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(o),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const secondSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    secondHmacKey,
+    new TextEncoder().encode(i)
+  );
+  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  debugLog("签名生成成功: %s", signature);
+  return {
+      signature,
+      timestamp
+  };
+}
+
 async function callUpstreamWithHeaders(
-  upstreamReq: UpstreamRequest, 
-  refererChatID: string, 
+  upstreamReq: UpstreamRequest,
+  refererChatID: string,
   authToken: string
 ): Promise<Response> {
   try {
     debugLog("调用上游API: %s", UPSTREAM_URL);
-    
-    // 特别检查和记录全方位多模态内容
-    const hasMultimedia = upstreamReq.messages.some(msg => 
-      Array.isArray(msg.content) && 
-      msg.content.some(block => 
-        ['image_url', 'video_url', 'document_url', 'audio_url'].includes(block.type)
-      )
-    );
-    
-    if (hasMultimedia) {
-      debugLog("🎯 请求包含多模态数据，正在发送到上游...");
-      
-      for (let i = 0; i < upstreamReq.messages.length; i++) {
-        const msg = upstreamReq.messages[i];
-        if (Array.isArray(msg.content)) {
-          for (let j = 0; j < msg.content.length; j++) {
-            const block = msg.content[j];
-            
-            // 处理图像
-            if (block.type === 'image_url' && block.image_url?.url) {
-              const url = block.image_url.url;
-              if (url.startsWith('data:image/')) {
-                const mimeMatch = url.match(/data:image\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                const sizeKB = Math.round(url.length * 0.75 / 1024); // base64 大约是原文件的 1.33 倍
-                debugLog("🖼️ 消息[%d] 图像[%d]: %s格式, 数据长度: %d字符 (~%dKB)", 
-                  i, j, format, url.length, sizeKB);
-                
-                // 图片大小警告
-                if (sizeKB > 1000) {
-                  debugLog("⚠️  图片较大 (%dKB)，可能导致上游处理失败", sizeKB);
-                  debugLog("💡 建议: 将图片压缩到 500KB 以下");
-                } else if (sizeKB > 500) {
-                  debugLog("⚠️  图片偏大 (%dKB)，建议压缩", sizeKB);
-                }
-              } else {
-                debugLog("🔗 消息[%d] 图像[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理视频
-            if (block.type === 'video_url' && block.video_url?.url) {
-              const url = block.video_url.url;
-              if (url.startsWith('data:video/')) {
-                const mimeMatch = url.match(/data:video\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎥 消息[%d] 视频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 视频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理文档
-            if (block.type === 'document_url' && block.document_url?.url) {
-              const url = block.document_url.url;
-              if (url.startsWith('data:application/')) {
-                const mimeMatch = url.match(/data:application\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("📄 消息[%d] 文档[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 文档[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理音频
-            if (block.type === 'audio_url' && block.audio_url?.url) {
-              const url = block.audio_url.url;
-              if (url.startsWith('data:audio/')) {
-                const mimeMatch = url.match(/data:audio\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎵 消息[%d] 音频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 音频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-          }
-        }
+
+    // 1. 解码JWT获取user_id
+    let userId = "unknown";
+    try {
+      const tokenParts = authToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(new TextDecoder().decode(decodeBase64(tokenParts[1])));
+        userId = payload.id || userId;
+        debugLog("从JWT解析到 user_id: %s", userId);
       }
+    } catch (e) {
+      debugLog("解析JWT失败: %v", e);
     }
-    
-    debugLog("上游请求体: %s", JSON.stringify(upstreamReq));
-    
-    const response = await fetch(UPSTREAM_URL, {
+
+    // 2. 准备签名所需参数
+    const timestamp = Date.now();
+    const requestId = crypto.randomUUID();
+    const userMessage = upstreamReq.messages.filter(m => m.role === 'user').pop()?.content;
+    const lastMessageContent = typeof userMessage === 'string' ? userMessage :
+      (Array.isArray(userMessage) ? userMessage.find(c => c.type === 'text')?.text || "" : "");
+
+    if (!lastMessageContent) {
+      throw new Error("无法获取用于签名的用户消息内容");
+    }
+
+    const e = `requestId,${requestId},timestamp,${timestamp},user_id,${userId}`;
+
+    // 3. 生成新签名
+    const { signature } = await generateSignature(e, lastMessageContent, timestamp);
+    debugLog("生成新版签名: %s", signature);
+
+    const reqBody = JSON.stringify(upstreamReq);
+    debugLog("上游请求体: %s", reqBody);
+
+    // 4. 构建带新参数的URL和Headers
+    const params = new URLSearchParams({
+        timestamp: timestamp.toString(),
+        requestId: requestId,
+        user_id: userId,
+        token: authToken,
+        current_url: `${ORIGIN_BASE}/c/${refererChatID}`,
+        pathname: `/c/${refererChatID}`,
+        signature_timestamp: timestamp.toString()
+    });
+    const fullURL = `${UPSTREAM_URL}?${params.toString()}`;
+
+    const response = await fetch(fullURL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
         "User-Agent": BROWSER_UA,
         "Authorization": `Bearer ${authToken}`,
-        "Accept-Language": "zh-CN",
-        "sec-ch-ua": SEC_CH_UA,
-        "sec-ch-ua-mobile": SEC_CH_UA_MOB,
-        "sec-ch-ua-platform": SEC_CH_UA_PLAT,
         "X-FE-Version": X_FE_VERSION,
+        "X-Signature": signature,
         "Origin": ORIGIN_BASE,
         "Referer": `${ORIGIN_BASE}/c/${refererChatID}`
       },
-      body: JSON.stringify(upstreamReq)
+      body: reqBody
     });
-    
+
     debugLog("上游响应状态: %d %s", response.status, response.statusText);
     return response;
   } catch (error) {
@@ -779,82 +818,188 @@ async function callUpstreamWithHeaders(
   }
 }
 
-function transformThinking(content: string): string {
-  // 去 <summary>…</summary>
-  let result = content.replace(/<summary>.*?<\/summary>/gs, "");
-  // 清理残留自定义标签，如 </thinking>、<Full> 等
-  result = result.replace(/<\/thinking>/g, "");
+/**
+ * Transform thinking content based on specified mode
+ * Returns either a string (for "strip", "thinking", "think", "raw" modes) or an object with reasoning and content
+ */
+export function transformThinking(content: string, mode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"): string | { reasoning: string; content: string } {
+
+  // Raw mode: return as-is
+  if (mode === "raw") {
+    return content;
+  }
+
+  // Separate mode: extract reasoning and content separately
+  if (mode === "separate") {
+    let reasoning = "";
+    let finalContent = "";
+
+    // Try standard regex first (for complete <details> tags)
+    const detailsMatch = content.match(/<details[^>]*>(.*?)<\/details>/gs);
+
+    if (detailsMatch) {
+      // Process reasoning content
+      reasoning = detailsMatch.join("\n");
+
+      // Remove <summary>...</summary>
+      reasoning = reasoning.replace(/<summary>.*?<\/summary>/gs, "");
+
+      // Remove <details> tags
+      reasoning = reasoning.replace(/<details[^>]*>/g, "");
+      reasoning = reasoning.replace(/<\/details>/g, "");
+
+      // Handle line prefix "> " (using multiline flag)
+      reasoning = reasoning.replace(/^> /gm, "");
+
+      reasoning = reasoning.trim();
+
+      // Extract final content (everything outside <details> tags)
+      finalContent = content.replace(/<details[^>]*>.*?<\/details>/gs, "").trim();
+    } else if (content.includes("</details>")) {
+      // Handle partial edit_content (starts mid-tag)
+      // Split by </details> to separate reasoning from content
+      const parts = content.split("</details>");
+
+      reasoning = parts[0];
+      finalContent = parts.slice(1).join("</details>").trim();
+
+      // Remove <summary>...</summary>
+      reasoning = reasoning.replace(/<summary>.*?<\/summary>/gs, "");
+
+      // Remove any partial opening tags at the start (e.g., 'true" duration="5"...')
+      reasoning = reasoning.replace(/^[^>]*>/, "");
+
+      // Handle line prefix "> "
+      reasoning = reasoning.replace(/^> /gm, "");
+
+      reasoning = reasoning.trim();
+
+      debugLog("Separate mode - extracted reasoning length: %d, content length: %d", reasoning.length, finalContent.length);
+      debugLog("Separate mode - content preview: %s", finalContent.substring(0, 50));
+    } else {
+      // No details tags, treat all as final content
+      finalContent = content;
+    }
+
+    return { reasoning, content: finalContent };
+  }
+
+  // For "strip", "thinking", and "think" modes, process as string
+  let result = content;
+
+  // Handle complete <details> tags first
+  if (content.match(/<details[^>]*>.*?<\/details>/gs)) {
+    switch (mode) {
+      case "thinking":
+        // Convert <details> to <thinking>, preserve content structure
+        result = result.replace(/<details[^>]*>/g, "<thinking>");
+        result = result.replace(/<\/details>/g, "</thinking>");
+        break;
+      case "think":
+        // Convert <details> to <think>, preserve content structure
+        result = result.replace(/<details[^>]*>/g, "<think>");
+        result = result.replace(/<\/details>/g, "</think>");
+        break;
+      case "strip":
+        // Remove <details> tags but keep content
+        result = result.replace(/<details[^>]*>/g, "");
+        result = result.replace(/<\/details>/g, "");
+        break;
+    }
+  } else if (content.includes("</details>")) {
+    // Handle partial edit_content
+    const parts = content.split("</details>");
+    let thinkingPart = parts[0];
+    const contentPart = parts.slice(1).join("</details>");
+
+    // Remove partial opening tag
+    thinkingPart = thinkingPart.replace(/^[^>]*>/, "");
+
+    switch (mode) {
+      case "thinking":
+        result = "<thinking>" + thinkingPart + "</thinking>" + contentPart;
+        break;
+      case "think":
+        result = "<think>" + thinkingPart + "</think>" + contentPart;
+        break;
+      case "strip":
+        result = thinkingPart + contentPart;
+        break;
+    }
+  }
+
+  // Remove <summary>...</summary> tags
+  result = result.replace(/<summary>.*?<\/summary>/gs, "");
+
+  // Clean up other custom tags
   result = result.replace(/<Full>/g, "");
   result = result.replace(/<\/Full>/g, "");
+
+  // Handle line prefix "> " (using multiline flag for proper matching)
+  result = result.replace(/^> /gm, "");
+
+  // Clean up extra whitespace but preserve paragraph structure
+  result = result.replace(/\n\s*\n\s*\n/g, "\n\n"); // Multiple newlines to double newlines
   result = result.trim();
-  
-  switch (THINK_TAGS_MODE as "strip" | "think" | "raw") {
-    case "think":
-      result = result.replace(/<details[^>]*>/g, "<thinking>");
-      result = result.replace(/<\/details>/g, "</thinking>");
-      break;
-    case "strip":
-      result = result.replace(/<details[^>]*>/g, "");
-      result = result.replace(/<\/details>/g, "");
-      break;
-  }
-  
-  // 处理每行前缀 "> "（包括起始位置）
-  result = result.replace(/^> /, "");
-  result = result.replace(/\n> /g, "\n");
-  return result.trim();
+
+  return result;
 }
 
 async function processUpstreamStream(
   body: ReadableStream<Uint8Array>,
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
-  modelName: string
-): Promise<void> {
+  modelName: string,
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"
+): Promise<Usage | null> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  
+  let finalUsage: Usage | null = null;
+
+  // For "separate" mode, accumulate thinking content
+  let accumulatedThinking = "";
+  let thinkingSent = false;
+
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ""; // 保留最后一个不完整的行
-      
+      buffer = lines.pop() || ""; // keep last partial line
+
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const dataStr = line.substring(6);
           if (dataStr === "") continue;
-          
-          debugLog("收到SSE数据: %s", dataStr);
-          
+
+          debugLog("Received SSE data: %s", dataStr);
+
           try {
             const upstreamData = JSON.parse(dataStr) as UpstreamData;
-            
-            // 错误检测
-            if (upstreamData.error || upstreamData.data.error || 
+
+            // Error detection
+            if (upstreamData.error || upstreamData.data.error ||
                 (upstreamData.data.inner && upstreamData.data.inner.error)) {
-              const errObj = upstreamData.error || upstreamData.data.error || 
+              const errObj = upstreamData.error || upstreamData.data.error ||
                            (upstreamData.data.inner && upstreamData.data.inner.error);
-              debugLog("上游错误: code=%d, detail=%s", errObj?.code, errObj?.detail);
-              
-              // 分析错误类型，特别是多模态相关错误
+              debugLog("Upstream error: code=%d, detail=%s", errObj?.code, errObj?.detail);
+
               const errorDetail = (errObj?.detail || "").toLowerCase();
               if (errorDetail.includes("something went wrong") || errorDetail.includes("try again later")) {
-                debugLog("🚨 Z.ai 服务器错误分析:");
-                debugLog("   📋 错误详情: %s", errObj?.detail);
-                debugLog("   🖼️  可能原因: 图片处理失败");
-                debugLog("   💡 建议解决方案:");
-                debugLog("      1. 使用更小的图片 (< 500KB)");
-                debugLog("      2. 尝试不同的图片格式 (JPEG 而不是 PNG)");
-                debugLog("      3. 稍后重试 (可能是服务器负载问题)");
-                debugLog("      4. 检查图片是否损坏");
+                debugLog("🚨 Z.ai server error analysis:");
+                debugLog("   📋 Detail: %s", errObj?.detail);
+                debugLog("   🖼️ Possible cause: image processing failure");
+                debugLog("   💡 Suggested fixes:");
+                debugLog("      1. Use smaller images (< 500KB)");
+                debugLog("      2. Try different formats (JPEG over PNG)");
+                debugLog("      3. Retry later (server load issue)");
+                debugLog("      4. Check for corrupted images");
               }
-              
-              // 发送结束chunk
+
+              // Send end chunk
               const endChunk: OpenAIResponse = {
                 id: `chatcmpl-${Date.now()}`,
                 object: "chat.completion.chunk",
@@ -868,49 +1013,202 @@ async function processUpstreamStream(
                   }
                 ]
               };
-              
+
               await writer.write(encoder.encode(`data: ${JSON.stringify(endChunk)}\n\n`));
               await writer.write(encoder.encode("data: [DONE]\n\n"));
-              return;
+              return finalUsage;
             }
-            
-            debugLog("解析成功 - 类型: %s, 阶段: %s, 内容长度: %d, 完成: %v",
-              upstreamData.type, upstreamData.data.phase, 
-              upstreamData.data.delta_content ? upstreamData.data.delta_content.length : 0, 
+
+            debugLog("Parsed upstream - type: %s, phase: %s, content length: %d, done: %v",
+              upstreamData.type, upstreamData.data.phase,
+              upstreamData.data.delta_content ? upstreamData.data.delta_content.length : 0,
               upstreamData.data.done);
-            
-            // 处理内容
-            if (upstreamData.data.delta_content && upstreamData.data.delta_content !== "") {
-              let out = upstreamData.data.delta_content;
-              if (upstreamData.data.phase === "thinking") {
-                out = transformThinking(out);
-              }
-              
-              if (out !== "") {
-                debugLog("发送内容(%s): %s", upstreamData.data.phase, out);
-                
-                const chunk: OpenAIResponse = {
-                  id: `chatcmpl-${Date.now()}`,
-                  object: "chat.completion.chunk",
-                  created: Math.floor(Date.now() / 1000),
-                  model: modelName,
-                  choices: [
-                    {
-                      index: 0,
-                      delta: { content: out }
-                    }
-                  ]
-                };
-                
-                await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+
+            // Capture usage information if present
+            if (upstreamData.data.usage) {
+              finalUsage = upstreamData.data.usage;
+              debugLog("Captured usage data: prompt=%d, completion=%d, total=%d",
+                finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+            }
+
+            // Handle edit_content (complete thinking block sent when phase changes)
+            if (upstreamData.data.edit_content && !thinkingSent) {
+              debugLog("Received edit_content with complete thinking block, length: %d", upstreamData.data.edit_content.length);
+              debugLog("Current mode: %s, thinkingSent: %s", THINK_TAGS_MODE, thinkingSent);
+
+              if (thinkTagsMode === "separate") {
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                if (typeof transformed === "object" && transformed.reasoning) {
+                  debugLog("Sending reasoning from edit_content, length: %d", transformed.reasoning.length);
+
+                  // Send reasoning as a separate field
+                  const reasoningChunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { reasoning_content: transformed.reasoning }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(reasoningChunk)}\n\n`));
+                  thinkingSent = true;
+                }
+              } else {
+                // For other modes, process the complete thinking block from edit_content
+                debugLog("Processing complete thinking block from edit_content for mode: %s", THINK_TAGS_MODE);
+
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                if (processedContent && processedContent.trim() !== "") {
+                  debugLog("Sending processed thinking content from edit_content, length: %d", processedContent.length);
+
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: processedContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                  thinkingSent = true;
+                } else {
+                  debugLog("Processed thinking content from edit_content is empty");
+                }
               }
             }
-            
-            // 检查是否结束
+
+            // Handle content
+            if (upstreamData.data.delta_content && upstreamData.data.delta_content !== "") {
+              const rawContent = upstreamData.data.delta_content;
+              const isThinking = upstreamData.data.phase === "thinking";
+
+              if (thinkTagsMode === "separate") {
+                // In separate mode, accumulate thinking content
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
+
+                  // Check if thinking block is complete (contains closing </details>)
+                  if (accumulatedThinking.includes("</details>") && !thinkingSent) {
+                    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                    if (typeof transformed === "object" && transformed.reasoning) {
+                      debugLog("Sending accumulated reasoning content, length: %d", transformed.reasoning.length);
+
+                      // Send reasoning as a separate field
+                      const reasoningChunk: OpenAIResponse = {
+                        id: `chatcmpl-${Date.now()}`,
+                        object: "chat.completion.chunk",
+                        created: Math.floor(Date.now() / 1000),
+                        model: modelName,
+                        choices: [
+                          {
+                            index: 0,
+                            delta: { reasoning_content: transformed.reasoning }
+                          }
+                        ]
+                      };
+
+                      await writer.write(encoder.encode(`data: ${JSON.stringify(reasoningChunk)}\n\n`));
+                      thinkingSent = true;
+                    }
+                  }
+                } else {
+                  // Regular content
+                  debugLog("Sending regular content: %s", rawContent);
+
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: rawContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                }
+              } else {
+                // Other modes: accumulate thinking content and process when complete
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
+                  debugLog("Accumulated thinking content, total length: %d", accumulatedThinking.length);
+
+                  // Check if thinking block is complete (contains closing </details>)
+                  if (accumulatedThinking.includes("</details>") && !thinkingSent) {
+                    debugLog("Processing complete thinking block, length: %d", accumulatedThinking.length);
+                    debugLog("Thinking content preview: %s", accumulatedThinking.substring(0, 200));
+
+                    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                    const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                    if (processedContent && processedContent.trim() !== "") {
+                      debugLog("Sending processed thinking content, length: %d", processedContent.length);
+
+                      const chunk: OpenAIResponse = {
+                        id: `chatcmpl-${Date.now()}`,
+                        object: "chat.completion.chunk",
+                        created: Math.floor(Date.now() / 1000),
+                        model: modelName,
+                        choices: [
+                          {
+                            index: 0,
+                            delta: { content: processedContent }
+                          }
+                        ]
+                      };
+
+                      await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                      thinkingSent = true;
+                    } else {
+                      debugLog("Processed thinking content is empty or whitespace-only");
+                    }
+                  } else {
+                    debugLog("Thinking block not complete yet, contains </details>: %s, thinkingSent: %s",
+                      accumulatedThinking.includes("</details>"), thinkingSent);
+                  }
+                  // Don't send individual thinking chunks - wait for complete block
+                } else {
+                  // Regular content (non-thinking)
+                  debugLog("Sending regular content: %s", rawContent);
+
+                  const chunk: OpenAIResponse = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model: modelName,
+                    choices: [
+                      {
+                        index: 0,
+                        delta: { content: rawContent }
+                      }
+                    ]
+                  };
+
+                  await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                }
+              }
+            }
+
+            // Check for done
             if (upstreamData.data.done || upstreamData.data.phase === "done") {
-              debugLog("检测到流结束信号");
-              
-              // 发送结束chunk
+              debugLog("Detected stream end signal");
+
+              // Send final chunk with usage if available
               const endChunk: OpenAIResponse = {
                 id: `chatcmpl-${Date.now()}`,
                 object: "chat.completion.chunk",
@@ -922,15 +1220,16 @@ async function processUpstreamStream(
                     delta: {},
                     finish_reason: "stop"
                   }
-                ]
+                ],
+                usage: finalUsage || undefined
               };
-              
+
               await writer.write(encoder.encode(`data: ${JSON.stringify(endChunk)}\n\n`));
               await writer.write(encoder.encode("data: [DONE]\n\n"));
-              return;
+              return finalUsage;
             }
           } catch (error) {
-            debugLog("SSE数据解析失败: %v", error);
+            debugLog("Failed to parse SSE data: %v", error);
           }
         }
       }
@@ -938,50 +1237,121 @@ async function processUpstreamStream(
   } finally {
     writer.close();
   }
+  
+  return finalUsage;
 }
 
-// 收集完整响应（用于非流式响应）
-async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<string> {
+// Collect full response for non-streaming mode
+async function collectFullResponse(
+  body: ReadableStream<Uint8Array>,
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate" = THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate"
+): Promise<{content: string, reasoning_content?: string, usage: Usage | null}> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let fullContent = "";
-  
+  let fullReasoning = "";
+  let accumulatedThinking = "";
+  let finalUsage: Usage | null = null;
+
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ""; // 保留最后一个不完整的行
-      
+      buffer = lines.pop() || "";
+
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const dataStr = line.substring(6);
           if (dataStr === "") continue;
-          
+
           try {
             const upstreamData = JSON.parse(dataStr) as UpstreamData;
-            
+
+            // Capture usage information if present
+            if (upstreamData.data.usage) {
+              finalUsage = upstreamData.data.usage;
+              debugLog("Captured usage data in non-streaming: prompt=%d, completion=%d, total=%d",
+                finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+            }
+
+            // Handle edit_content (complete thinking block)
+            if (upstreamData.data.edit_content) {
+              debugLog("Received edit_content in non-streaming, length: %d", upstreamData.data.edit_content.length);
+
+              if (thinkTagsMode === "separate") {
+                // For separate mode, extract reasoning and content separately
+                if (!fullReasoning) {
+                  const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                  if (typeof transformed === "object") {
+                    fullReasoning = transformed.reasoning;
+                    debugLog("Extracted reasoning from edit_content, length: %d", fullReasoning.length);
+
+                    // Also add the content part from edit_content to fullContent
+                    if (transformed.content && transformed.content.trim() !== "") {
+                      fullContent += transformed.content;
+                      debugLog("Added content part from edit_content, length: %d", transformed.content.length);
+                    }
+                  }
+                }
+              } else {
+                // For other modes, process the thinking content and add to fullContent
+                const transformed = transformThinking(upstreamData.data.edit_content, thinkTagsMode);
+                const processedContent = typeof transformed === "string" ? transformed : transformed.content;
+
+                if (processedContent && processedContent.trim() !== "") {
+                  fullContent += processedContent;
+                  debugLog("Added processed edit_content to fullContent, length: %d", processedContent.length);
+                }
+              }
+            }
+
             if (upstreamData.data.delta_content !== "") {
-              let out = upstreamData.data.delta_content;
-              if (upstreamData.data.phase === "thinking") {
-                out = transformThinking(out);
-              }
-              
-              if (out !== "") {
-                fullContent += out;
+              const rawContent = upstreamData.data.delta_content;
+              const isThinking = upstreamData.data.phase === "thinking";
+
+              if (thinkTagsMode === "separate") {
+                if (isThinking) {
+                  accumulatedThinking += rawContent;
+                } else {
+                  fullContent += rawContent;
+                }
+              } else {
+                // For non-separate modes, only process non-thinking content
+                // Thinking content is handled by edit_content
+                if (!isThinking) {
+                  fullContent += rawContent;
+                }
               }
             }
-            
-            // 检查是否结束
+
             if (upstreamData.data.done || upstreamData.data.phase === "done") {
-              debugLog("检测到完成信号，停止收集");
-              return fullContent;
+              debugLog("Detected completion signal, stopping collection");
+
+
+              // Process accumulated thinking if in separate mode (only if not already set from edit_content)
+              if (thinkTagsMode === "separate" && accumulatedThinking && !fullReasoning) {
+                const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+                if (typeof transformed === "object") {
+                  fullReasoning = transformed.reasoning;
+                  debugLog("Set fullReasoning from accumulated thinking, length: %d", fullReasoning.length);
+                }
+              }
+
+              debugLog("collectFullResponse early return - content length: %d, reasoning length: %d",
+                fullContent.length, fullReasoning ? fullReasoning.length : 0);
+
+              return {
+                content: fullContent,
+                reasoning_content: fullReasoning || undefined,
+                usage: finalUsage
+              };
             }
-          } catch (error) {
-            // 忽略解析错误
+          } catch (_error) {
+            // ignore parse errors
           }
         }
       }
@@ -989,212 +1359,45 @@ async function collectFullResponse(body: ReadableStream<Uint8Array>): Promise<st
   } finally {
     reader.releaseLock();
   }
-  
-  return fullContent;
+
+  // Process accumulated thinking if in separate mode
+  if (thinkTagsMode === "separate" && accumulatedThinking) {
+    const transformed = transformThinking(accumulatedThinking, thinkTagsMode);
+    if (typeof transformed === "object") {
+      fullReasoning = transformed.reasoning;
+    }
+  }
+
+  debugLog("collectFullResponse returning - content length: %d, reasoning length: %d",
+    fullContent.length, fullReasoning ? fullReasoning.length : 0);
+
+  return {
+    content: fullContent,
+    reasoning_content: fullReasoning || undefined,
+    usage: finalUsage
+  };
 }
 
 /**
- * HTTP服务器和路由处理
+ * HTTP server and routing
  */
 
-function getIndexHTML(): string {
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZtoApi - OpenAI兼容API代理</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 40px;
-            margin-top: 40px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-        }
-        .links {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-        .link-card {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid #e9ecef;
-        }
-        .link-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .link-card h3 {
-            margin-top: 0;
-            color: #007bff;
-        }
-        .link-card p {
-            color: #666;
-            margin-bottom: 20px;
-        }
-        .link-card a {
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.3s ease;
-        }
-        .link-card a:hover {
-            background-color: #0056b3;
-        }
-        .features {
-            margin-top: 60px;
-        }
-        .features h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .feature-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .feature-item {
-            text-align: center;
-            padding: 20px;
-        }
-        .feature-item i {
-            font-size: 2rem;
-            color: #007bff;
-            margin-bottom: 15px;
-        }
-        .feature-item h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        .feature-item p {
-            color: #666;
-        }
-        footer {
-            text-align: center;
-            margin-top: 60px;
-            padding-top: 20px;
-            border-top: 1px solid #e9ecef;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>ZtoApi</h1>
-            <div class="subtitle">OpenAI兼容API代理 for Z.ai GLM-4.5</div>
-            <p>一个高性能、易于部署的API代理服务，让你能够使用OpenAI兼容的格式访问Z.ai的GLM-4.5模型。</p>
-        </header>
-        
-        <div class="links">
-            <div class="link-card">
-                <h3>📖 API文档</h3>
-                <p>查看完整的API文档，了解如何使用本服务。</p>
-                <a href="/docs">查看文档</a>
-            </div>
-            
-            <div class="link-card">
-                <h3>📊 API调用看板</h3>
-                <p>实时监控API调用情况，查看请求统计和性能指标。</p>
-                <a href="/dashboard">查看看板</a>
-            </div>
-            
-            <div class="link-card">
-                <h3>🤖 模型列表</h3>
-                <p>查看可用的AI模型列表及其详细信息。</p>
-                <a href="/v1/models">查看模型</a>
-            </div>
-        </div>
-        
-        <div class="features">
-            <h2>功能特性</h2>
-            <div class="feature-list">
-                <div class="feature-item">
-                    <div>🔄</div>
-                    <h3>OpenAI API兼容</h3>
-                    <p>完全兼容OpenAI的API格式，无需修改客户端代码</p>
-                </div>
-                
-                <div class="feature-item">
-                    <div>🌊</div>
-                    <h3>流式响应支持</h3>
-                    <p>支持实时流式输出，提供更好的用户体验</p>
-                </div>
-                
-                <div class="feature-item">
-                    <div>🔐</div>
-                    <h3>身份验证</h3>
-                    <p>支持API密钥验证，确保服务安全</p>
-                </div>
-                
-                <div class="feature-item">
-                    <div>🛠️</div>
-                    <h3>灵活配置</h3>
-                    <p>通过环境变量进行灵活配置</p>
-                </div>
-                
-                <div class="feature-item">
-                    <div>📝</div>
-                    <h3>思考过程展示</h3>
-                    <p>智能处理并展示模型的思考过程</p>
-                </div>
-                
-                <div class="feature-item">
-                    <div>📊</div>
-                    <h3>实时监控</h3>
-                    <p>提供Web仪表板，实时显示API转发情况和统计信息</p>
-                </div>
-            </div>
-        </div>
-        
-        <footer>
-            <p>© 2024 ZtoApi. Powered by Deno & Z.ai GLM-4.5</p>
-        </footer>
-    </div>
-</body>
-</html>`;
+async function getIndexHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/index.html');
+  } catch (error) {
+    console.error('Failed to read index.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
+  }
 }
 
 async function handleIndex(request: Request): Promise<Response> {
   if (request.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
-  
-  return new Response(getIndexHTML(), {
+
+  const html = await getIndexHTML();
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8"
@@ -1202,38 +1405,37 @@ async function handleIndex(request: Request): Promise<Response> {
   });
 }
 
-async function handleOptions(request: Request): Promise<Response> {
+function handleOptions(request: Request): Response {
   const headers = new Headers();
   setCORSHeaders(headers);
-  
+
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers });
   }
-  
+
   return new Response("Not Found", { status: 404, headers });
 }
 
-async function handleModels(request: Request): Promise<Response> {
+function handleModels(request: Request): Response {
   const headers = new Headers();
   setCORSHeaders(headers);
-  
+
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers });
   }
-  
-  // 支持的模型
+
   const models = SUPPORTED_MODELS.map(model => ({
     id: model.name,
       object: "model",
       created: Math.floor(Date.now() / 1000),
       owned_by: "z.ai"
   }));
-  
+
   const response: ModelsResponse = {
     object: "list",
     data: models
   };
-  
+
   headers.set("Content-Type", "application/json");
   return new Response(JSON.stringify(response), {
     status: 200,
@@ -1246,176 +1448,214 @@ async function handleChatCompletions(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   const userAgent = request.headers.get("User-Agent") || "";
-  
-  debugLog("收到chat completions请求");
+
+  debugLog("Received chat completions request");
   debugLog("🌐 User-Agent: %s", userAgent);
-  
-  // Cherry Studio 检测
+
+  // Cherry Studio detection
   const isCherryStudio = userAgent.toLowerCase().includes('cherry') || userAgent.toLowerCase().includes('studio');
   if (isCherryStudio) {
-    debugLog("🍒 检测到 Cherry Studio 客户端版本: %s", 
+    debugLog("🍒 Detected Cherry Studio client version: %s",
       userAgent.match(/CherryStudio\/([^\s]+)/)?.[1] || 'unknown');
   }
+
+  // Read feature control headers
+  const thinkingHeader = request.headers.get("X-Feature-Thinking");
+  const webSearchHeader = request.headers.get("X-Feature-Web-Search");
+  const autoWebSearchHeader = request.headers.get("X-Feature-Auto-Web-Search");
+  const imageGenerationHeader = request.headers.get("X-Feature-Image-Generation");
+  const titleGenerationHeader = request.headers.get("X-Feature-Title-Generation");
+  const tagsGenerationHeader = request.headers.get("X-Feature-Tags-Generation");
+  const mcpHeader = request.headers.get("X-Feature-MCP");
   
+  // Read think tags mode customization header
+  const thinkTagsModeHeader = request.headers.get("X-Think-Tags-Mode");
+
+  // Parse header values to boolean (default to model capabilities if not specified)
+  const parseFeatureHeader = (headerValue: string | null, defaultValue: boolean): boolean => {
+    if (headerValue === null) return defaultValue;
+    const lowerValue = headerValue.toLowerCase().trim();
+    return lowerValue === "true" || lowerValue === "1" || lowerValue === "yes";
+  };
+
+  // Parse think tags mode header with validation
+  const parseThinkTagsMode = (headerValue: string | null): "strip" | "thinking" | "think" | "raw" | "separate" => {
+    if (headerValue === null) return THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate";
+
+    const validModes = ["strip", "thinking", "think", "raw", "separate"];
+    const normalizedValue = headerValue.toLowerCase().trim();
+    
+    if (validModes.includes(normalizedValue)) {
+      return normalizedValue as "strip" | "thinking" | "think" | "raw" | "separate";
+    }
+    
+    debugLog("⚠️ Invalid X-Think-Tags-Mode value: %s. Using default: %s", headerValue, THINK_TAGS_MODE);
+    return THINK_TAGS_MODE as "strip" | "thinking" | "think" | "raw" | "separate";
+  };
+
+  const currentThinkTagsMode = parseThinkTagsMode(thinkTagsModeHeader);
+
+  debugLog("Feature headers received: Thinking=%s, WebSearch=%s, AutoWebSearch=%s, ImageGen=%s, TitleGen=%s, TagsGen=%s, MCP=%s",
+    thinkingHeader, webSearchHeader, autoWebSearchHeader, imageGenerationHeader, titleGenerationHeader, tagsGenerationHeader, mcpHeader);
+  debugLog("🎯 Think tags mode: %s (header: %s, default: %s)", currentThinkTagsMode, thinkTagsModeHeader || "not provided", THINK_TAGS_MODE);
+
   const headers = new Headers();
   setCORSHeaders(headers);
-  
+
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 200, headers });
   }
-  
-  // 验证API Key
+
+  // API key validation
   const authHeader = request.headers.get("Authorization");
   if (!validateApiKey(authHeader)) {
-    debugLog("缺少或无效的Authorization头");
+    debugLog("Missing or invalid Authorization header");
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 401);
     addLiveRequest(request.method, path, 401, duration, userAgent);
-    return new Response("Missing or invalid Authorization header", { 
+    return new Response("Missing or invalid Authorization header", {
       status: 401,
-      headers 
+      headers
     });
   }
-  
-  debugLog("API key验证通过");
-  
-  // 读取请求体
+
+  debugLog("API key validated");
+
+  // Read request body
   let body: string;
   try {
     body = await request.text();
-    debugLog("📥 收到请求体长度: %d 字符", body.length);
-    
-    // 为Cherry Studio调试：记录原始请求体（截取前1000字符避免日志过长）
+    debugLog("📥 Received body length: %d chars", body.length);
+
     const bodyPreview = body.length > 1000 ? body.substring(0, 1000) + "..." : body;
-    debugLog("📄 请求体预览: %s", bodyPreview);
+    debugLog("📄 Body preview: %s", bodyPreview);
   } catch (error) {
-    debugLog("读取请求体失败: %v", error);
+    debugLog("Failed to read request body: %v", error);
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 400);
     addLiveRequest(request.method, path, 400, duration, userAgent);
-    return new Response("Failed to read request body", { 
+    return new Response("Failed to read request body", {
       status: 400,
-      headers 
+      headers
     });
   }
-  
-  // 解析请求
+
+  // Parse JSON
   let req: OpenAIRequest;
+  let incomingBody: Record<string, unknown> | null = null;
   try {
-    req = JSON.parse(body) as OpenAIRequest;
-    debugLog("✅ JSON解析成功");
+    incomingBody = JSON.parse(body);
+    req = incomingBody as unknown as OpenAIRequest;
+    debugLog("✅ JSON parsed successfully");
   } catch (error) {
-    debugLog("JSON解析失败: %v", error);
+    debugLog("JSON parse failed: %v", error);
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 400);
     addLiveRequest(request.method, path, 400, duration, userAgent);
-    return new Response("Invalid JSON", { 
+    return new Response("Invalid JSON", {
       status: 400,
-      headers 
+      headers
     });
   }
-  
-  // 如果客户端没有明确指定stream参数，使用默认值
+
+  // If client didn't specify stream parameter, use default
   if (!body.includes('"stream"')) {
     req.stream = DEFAULT_STREAM;
-    debugLog("客户端未指定stream参数，使用默认值: %v", DEFAULT_STREAM);
+    debugLog("Client did not specify stream parameter; using default: %v", DEFAULT_STREAM);
   }
-  
-  // 获取模型配置
+
   const modelConfig = getModelConfig(req.model);
-  debugLog("请求解析成功 - 模型: %s (%s), 流式: %v, 消息数: %d", req.model, modelConfig.name, req.stream, req.messages.length);
-  
-  // Cherry Studio 调试：详细检查每条消息
-  debugLog("🔍 Cherry Studio 调试 - 检查原始消息:");
+  debugLog("Request parsed - model: %s (%s), stream: %v, messages: %d", req.model, modelConfig.name, req.stream, req.messages.length);
+
+  // Cherry Studio debug: inspect each message
+  debugLog("🔍 Cherry Studio debug - inspect raw messages:");
   for (let i = 0; i < req.messages.length; i++) {
     const msg = req.messages[i];
-    debugLog("  消息[%d] role: %s", i, msg.role);
-    
+    debugLog("  Message[%d] role: %s", i, msg.role);
+
     if (typeof msg.content === 'string') {
-      debugLog("  消息[%d] content: 字符串类型, 长度: %d", i, msg.content.length);
+      debugLog("  Message[%d] content: string, length: %d", i, msg.content.length);
       if (msg.content.length === 0) {
-        debugLog("  ⚠️  消息[%d] 内容为空字符串!", i);
+        debugLog("  ⚠️  Message[%d] content is empty string!", i);
       } else {
-        debugLog("  消息[%d] 内容预览: %s", i, msg.content.substring(0, 100));
+        debugLog("  Message[%d] content preview: %s", i, msg.content.substring(0, 100));
       }
     } else if (Array.isArray(msg.content)) {
-      debugLog("  消息[%d] content: 数组类型, 块数: %d", i, msg.content.length);
+      debugLog("  Message[%d] content: array, blocks: %d", i, msg.content.length);
       for (let j = 0; j < msg.content.length; j++) {
         const block = msg.content[j];
-        debugLog("    块[%d] type: %s", j, block.type);
+        debugLog("    Block[%d] type: %s", j, block.type);
         if (block.type === 'text' && block.text) {
-          debugLog("    块[%d] text: %s", j, block.text.substring(0, 50));
+          debugLog("    Block[%d] text: %s", j, block.text.substring(0, 50));
         } else if (block.type === 'image_url' && block.image_url?.url) {
-          debugLog("    块[%d] image_url: %s格式, 长度: %d", j, 
-            block.image_url.url.startsWith('data:') ? 'base64' : 'url', 
+          debugLog("    Block[%d] image_url: %s format, length: %d", j,
+            block.image_url.url.startsWith('data:') ? 'base64' : 'url',
             block.image_url.url.length);
         }
       }
     } else {
-      debugLog("  ⚠️  消息[%d] content 类型异常: %s", i, typeof msg.content);
+      debugLog("  ⚠️  Message[%d] content type unexpected: %s", i, typeof msg.content);
     }
   }
-  
-  // 处理和验证消息（特别是多模态内容）
+
+  // Process and validate messages (multimodal handling)
   const processedMessages = processMessages(req.messages, modelConfig);
-  debugLog("消息处理完成，处理后消息数: %d", processedMessages.length);
-  
-  // 检查是否包含多模态内容
-  const hasMultimodal = processedMessages.some(msg => 
-    Array.isArray(msg.content) && 
-    msg.content.some(block => 
+  debugLog("Messages processed, count after processing: %d", processedMessages.length);
+
+  const hasMultimodal = processedMessages.some(msg =>
+    Array.isArray(msg.content) &&
+    msg.content.some(block =>
       ['image_url', 'video_url', 'document_url', 'audio_url'].includes(block.type)
     )
   );
-  
+
   if (hasMultimodal) {
-    debugLog("🎯 检测到全方位多模态请求，模型: %s", modelConfig.name);
+    debugLog("🎯 Detected full multimodal request, model: %s", modelConfig.name);
     if (!modelConfig.capabilities.vision) {
-      debugLog("❌ 严重错误: 模型不支持多模态，但收到了多媒体内容！");
-      debugLog("💡 Cherry Studio用户请检查: 确认选择了 'glm-4.5v' 而不是 'GLM-4.5'");
-      debugLog("🔧 模型映射状态: %s → %s (vision: %s)", 
+      debugLog("❌ Severe error: model doesn't support multimodal but received media content!");
+      debugLog("💡 Cherry Studio users: ensure you selected 'glm-4.5v' instead of 'GLM-4.5'");
+      debugLog("🔧 Model mapping: %s → %s (vision: %s)",
         req.model, modelConfig.upstreamId, modelConfig.capabilities.vision);
     } else {
-      debugLog("✅ GLM-4.5V支持全方位多模态理解：图像、视频、文档、音频");
-      
-      // 检查是否使用匿名token（多模态功能的重要限制）
+      debugLog("✅ GLM-4.5V supports full multimodal understanding: images, video, documents, audio");
+
       if (!ZAI_TOKEN || ZAI_TOKEN.trim() === "") {
-        debugLog("⚠️ 重要警告: 正在使用匿名token处理多模态请求");
-        debugLog("💡 Z.ai的匿名token可能不支持图像/视频/文档处理");
-        debugLog("🔧 解决方案: 设置 ZAI_TOKEN 环境变量为正式的API Token");
-        debugLog("📋 如果请求失败，这很可能是token权限问题");
+        debugLog("⚠️ Important warning: using anonymous token for multimodal requests");
+        debugLog("💡 Z.ai anonymous tokens may not support image/video/document processing");
+        debugLog("🔧 Fix: set ZAI_TOKEN environment variable to an official API token");
+        debugLog("📋 If requests fail, token permissions are likely the cause");
       } else {
-        debugLog("✅ 使用正式API Token，支持完整多模态功能");
+        debugLog("✅ Using official API token; full multimodal features supported");
       }
     }
   } else if (modelConfig.capabilities.vision && modelConfig.id === 'glm-4.5v') {
-    debugLog("ℹ️ 使用GLM-4.5V模型但未检测到多媒体数据，仅处理文本内容");
+    debugLog("ℹ️ Using GLM-4.5V model but no media detected; processing text only");
   }
-  
-  // 生成会话相关ID
-  const chatID = `${Date.now()}-${Math.floor(Date.now() / 1000)}`;
-  const msgID = Date.now().toString();
-  
-  // 构造上游请求
+
+  // Generate session IDs (prefer client-provided values if present in incoming body)
+  const chatID = (typeof incomingBody === "object" && incomingBody?.chat_id) ? String(incomingBody.chat_id) : `${Date.now()}-${Math.floor(Date.now() / 1000)}`;
+  const msgID = (typeof incomingBody === "object" && incomingBody?.id) ? String(incomingBody.id) : Date.now().toString();
+
+  // Build upstream request
   const upstreamReq: UpstreamRequest = {
-    stream: true, // 总是使用流式从上游获取
+    stream: true, // always fetch upstream as stream
     chat_id: chatID,
     id: msgID,
     model: modelConfig.upstreamId,
     messages: processedMessages,
     params: modelConfig.defaultParams,
     features: {
-      enable_thinking: modelConfig.capabilities.thinking,
-      image_generation: false,
-      web_search: false,
-      auto_web_search: false,
+      enable_thinking: parseFeatureHeader(thinkingHeader, modelConfig.capabilities.thinking),
+      image_generation: parseFeatureHeader(imageGenerationHeader, false),
+      web_search: parseFeatureHeader(webSearchHeader, false),
+      auto_web_search: parseFeatureHeader(autoWebSearchHeader, false),
       preview_mode: modelConfig.capabilities.vision
     },
     background_tasks: {
-      title_generation: false,
-      tags_generation: false
+      title_generation: parseFeatureHeader(titleGenerationHeader, false),
+      tags_generation: parseFeatureHeader(tagsGenerationHeader, false)
     },
-    mcp_servers: modelConfig.capabilities.mcp ? [] : undefined,
+    mcp_servers: (parseFeatureHeader(mcpHeader, modelConfig.capabilities.mcp) && modelConfig.capabilities.mcp) ? [] : undefined,
     model_item: {
       id: modelConfig.upstreamId,
       name: modelConfig.name,
@@ -1459,83 +1699,83 @@ async function handleChatCompletions(request: Request): Promise<Response> {
     variables: {
       "{{USER_NAME}}": `Guest-${Date.now()}`,
       "{{USER_LOCATION}}": "Unknown",
-      "{{CURRENT_DATETIME}}": new Date().toLocaleString('zh-CN'),
-      "{{CURRENT_DATE}}": new Date().toLocaleDateString('zh-CN'),
-      "{{CURRENT_TIME}}": new Date().toLocaleTimeString('zh-CN'),
-      "{{CURRENT_WEEKDAY}}": new Date().toLocaleDateString('zh-CN', { weekday: 'long' }),
-      "{{CURRENT_TIMEZONE}}": "Asia/Shanghai",
-      "{{USER_LANGUAGE}}": "zh-CN"
+      "{{CURRENT_DATETIME}}": new Date().toLocaleString('en-US'),
+      "{{CURRENT_DATE}}": new Date().toLocaleDateString('en-US'),
+      "{{CURRENT_TIME}}": new Date().toLocaleTimeString('en-US'),
+      "{{CURRENT_WEEKDAY}}": new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+      "{{CURRENT_TIMEZONE}}": "UTC",
+      "{{USER_LANGUAGE}}": "en-US"
     }
   };
-  
-  // 选择本次对话使用的token
+
+  // Choose token for this conversation
   let authToken = ZAI_TOKEN;
   if (ANON_TOKEN_ENABLED) {
     try {
       const anonToken = await getAnonymousToken();
       authToken = anonToken;
-      debugLog("匿名token获取成功: %s...", anonToken.substring(0, 10));
+      debugLog("Anonymous token obtained: %s...", anonToken.substring(0, 10));
     } catch (error) {
-      debugLog("匿名token获取失败，回退固定token: %v", error);
+      debugLog("Failed to obtain anonymous token; falling back to configured token: %v", error);
     }
   }
-  
-  // 调用上游API
+
+  // Call upstream
   try {
     if (req.stream) {
-      return await handleStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig);
+      return await handleStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig, currentThinkTagsMode);
     } else {
-      return await handleNonStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig);
+      return await handleNonStreamResponse(upstreamReq, chatID, authToken, startTime, path, userAgent, req, modelConfig, currentThinkTagsMode);
     }
   } catch (error) {
-    debugLog("调用上游失败: %v", error);
+    debugLog("Upstream call failed: %v", error);
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 502);
     addLiveRequest(request.method, path, 502, duration, userAgent);
-    return new Response("Failed to call upstream", { 
+    return new Response("Failed to call upstream", {
       status: 502,
-      headers 
+      headers
     });
   }
 }
 
 async function handleStreamResponse(
-  upstreamReq: UpstreamRequest, 
-  chatID: string, 
+  upstreamReq: UpstreamRequest,
+  chatID: string,
   authToken: string,
   startTime: number,
   path: string,
   userAgent: string,
   req: OpenAIRequest,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<Response> {
-  debugLog("开始处理流式响应 (chat_id=%s)", chatID);
-  
+  debugLog("Starting to handle stream response (chat_id=%s)", chatID);
+
   try {
     const response = await callUpstreamWithHeaders(upstreamReq, chatID, authToken);
-    
+
     if (!response.ok) {
-      debugLog("上游返回错误状态: %d", response.status);
+      debugLog("Upstream returned error status: %d", response.status);
       const duration = Date.now() - startTime;
       recordRequestStats(startTime, path, 502);
       addLiveRequest("POST", path, 502, duration, userAgent);
       return new Response("Upstream error", { status: 502 });
     }
-    
+
     if (!response.body) {
-      debugLog("上游响应体为空");
+      debugLog("Upstream response body is empty");
       const duration = Date.now() - startTime;
       recordRequestStats(startTime, path, 502);
       addLiveRequest("POST", path, 502, duration, userAgent);
       return new Response("Upstream response body is empty", { status: 502 });
     }
-    
-    // 创建可读流
+
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
-    
-    // 发送第一个chunk（role）
+
+    // Send first chunk (role)
     const firstChunk: OpenAIResponse = {
       id: `chatcmpl-${Date.now()}`,
       object: "chat.completion.chunk",
@@ -1548,20 +1788,24 @@ async function handleStreamResponse(
         }
       ]
     };
-    
-    // 写入第一个chunk
+
     writer.write(encoder.encode(`data: ${JSON.stringify(firstChunk)}\n\n`));
-    
-    // 处理上游SSE流
-    processUpstreamStream(response.body, writer, encoder, req.model).catch(error => {
-      debugLog("处理上游流时出错: %v", error);
+
+    // Process upstream SSE stream asynchronously
+    processUpstreamStream(response.body, writer, encoder, req.model, thinkTagsMode).then(usage => {
+      if (usage) {
+        debugLog("Stream completed with usage: prompt=%d, completion=%d, total=%d",
+          usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+      }
+    }).catch(error => {
+      debugLog("Error while processing upstream stream: %v", error);
     });
-    
-    // 记录成功请求统计
+
+    // Record stats
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 200);
     addLiveRequest("POST", path, 200, duration, userAgent, modelConfig.name);
-    
+
     return new Response(readable, {
       status: 200,
       headers: {
@@ -1575,7 +1819,7 @@ async function handleStreamResponse(
       }
     });
   } catch (error) {
-    debugLog("处理流式响应时出错: %v", error);
+    debugLog("Error handling stream response: %v", error);
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 502);
     addLiveRequest("POST", path, 502, duration, userAgent);
@@ -1584,41 +1828,61 @@ async function handleStreamResponse(
 }
 
 async function handleNonStreamResponse(
-  upstreamReq: UpstreamRequest, 
-  chatID: string, 
+  upstreamReq: UpstreamRequest,
+  chatID: string,
   authToken: string,
   startTime: number,
   path: string,
   userAgent: string,
   req: OpenAIRequest,
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig,
+  thinkTagsMode: "strip" | "thinking" | "think" | "raw" | "separate"
 ): Promise<Response> {
-  debugLog("开始处理非流式响应 (chat_id=%s)", chatID);
-  
+  debugLog("Starting to handle non-stream response (chat_id=%s)", chatID);
+
   try {
     const response = await callUpstreamWithHeaders(upstreamReq, chatID, authToken);
-    
+
     if (!response.ok) {
-      debugLog("上游返回错误状态: %d", response.status);
+      debugLog("Upstream returned error status: %d", response.status);
       const duration = Date.now() - startTime;
       recordRequestStats(startTime, path, 502);
       addLiveRequest("POST", path, 502, duration, userAgent);
       return new Response("Upstream error", { status: 502 });
     }
-    
+
     if (!response.body) {
-      debugLog("上游响应体为空");
+      debugLog("Upstream response body is empty");
       const duration = Date.now() - startTime;
       recordRequestStats(startTime, path, 502);
       addLiveRequest("POST", path, 502, duration, userAgent);
       return new Response("Upstream response body is empty", { status: 502 });
     }
-    
-    // 收集完整响应
-    const finalContent = await collectFullResponse(response.body);
-    debugLog("内容收集完成，最终长度: %d", finalContent.length);
-    
-    // 构造完整响应
+
+    const { content: finalContent, reasoning_content: reasoningContent, usage: finalUsage } = await collectFullResponse(response.body, thinkTagsMode);
+    debugLog("Content collection completed, final length: %d", finalContent.length);
+    debugLog("Reasoning content status: %s", reasoningContent ? `present (${reasoningContent.length} chars)` : "not present");
+
+    if (reasoningContent) {
+      debugLog("Reasoning content collected, length: %d", reasoningContent.length);
+      debugLog("Reasoning content preview: %s", reasoningContent.substring(0, 100));
+    }
+
+    if (finalUsage) {
+      debugLog("Non-stream completed with usage: prompt=%d, completion=%d, total=%d",
+        finalUsage.prompt_tokens, finalUsage.completion_tokens, finalUsage.total_tokens);
+    }
+
+    const message: Message = {
+      role: "assistant",
+      content: finalContent
+    };
+
+    // Add reasoning_content if available
+    if (reasoningContent) {
+      message.reasoning_content = reasoningContent;
+    }
+
     const openAIResponse: OpenAIResponse = {
       id: `chatcmpl-${Date.now()}`,
       object: "chat.completion",
@@ -1627,25 +1891,17 @@ async function handleNonStreamResponse(
       choices: [
         {
           index: 0,
-          message: {
-            role: "assistant",
-            content: finalContent
-          },
+          message: message,
           finish_reason: "stop"
         }
       ],
-      usage: {
-        prompt_tokens: 0,
-        completion_tokens: 0,
-        total_tokens: 0
-      }
+      usage: finalUsage || undefined
     };
-    
-    // 记录成功请求统计
+
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 200);
     addLiveRequest("POST", path, 200, duration, userAgent, modelConfig.name);
-    
+
     return new Response(JSON.stringify(openAIResponse), {
       status: 200,
       headers: {
@@ -1657,7 +1913,7 @@ async function handleNonStreamResponse(
       }
     });
   } catch (error) {
-    debugLog("处理非流式响应时出错: %v", error);
+    debugLog("Error processing non-stream response: %v", error);
     const duration = Date.now() - startTime;
     recordRequestStats(startTime, path, 502);
     addLiveRequest("POST", path, 502, duration, userAgent);
@@ -1666,399 +1922,36 @@ async function handleNonStreamResponse(
 }
 
 /**
- * 生成 Dashboard 监控页面HTML模板
- * 提供实时API调用监控和统计信息展示  
- * @returns string 完整的HTML页面内容
+ * Dashboard HTML template
+ * Provides live API call monitoring and statistics
  */
-function getDashboardHTML(): string {
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API调用看板</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 14px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-        .requests-container {
-            margin-top: 30px;
-        }
-        .requests-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .requests-table th, .requests-table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .requests-table th {
-            background-color: #f8f9fa;
-        }
-        .status-success {
-            color: #28a745;
-        }
-        .status-error {
-            color: #dc3545;
-        }
-        .refresh-info {
-            text-align: center;
-            margin-top: 20px;
-            color: #6c757d;
-            font-size: 14px;
-        }
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
-            gap: 10px;
-        }
-        .pagination-container button {
-            padding: 5px 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .pagination-container button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        .pagination-container button:hover:not(:disabled) {
-            background-color: #0056b3;
-        }
-        .chart-container {
-            margin-top: 30px;
-            height: 300px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            padding: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>API调用看板</h1>
-        
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-value" id="total-requests">0</div>
-                <div class="stat-label">总请求数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="successful-requests">0</div>
-                <div class="stat-label">成功请求</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="failed-requests">0</div>
-                <div class="stat-label">失败请求</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avg-response-time">0s</div>
-                <div class="stat-label">平均响应时间</div>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <h2>请求统计图表</h2>
-            <canvas id="requestsChart"></canvas>
-        </div>
-        
-        <div class="requests-container">
-            <h2>实时请求</h2>
-            <table class="requests-table">
-                <thead>
-                    <tr>
-                        <th>时间</th>
-                        <th>模型</th>
-                        <th>方法</th>
-                        <th>状态</th>
-                        <th>耗时</th>
-                        <th>User Agent</th>
-                    </tr>
-                </thead>
-                <tbody id="requests-tbody">
-                    <!-- 请求记录将通过JavaScript动态添加 -->
-                </tbody>
-            </table>
-            <div class="pagination-container">
-                <button id="prev-page" disabled>上一页</button>
-                <span id="page-info">第 1 页，共 1 页</span>
-                <button id="next-page" disabled>下一页</button>
-            </div>
-        </div>
-        
-        <div class="refresh-info">
-            数据每5秒自动刷新一次
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // 全局变量
-        let allRequests = [];
-        let currentPage = 1;
-        const itemsPerPage = 10;
-        let requestsChart = null;
-        
-        // 更新统计数据
-        function updateStats() {
-            fetch('/dashboard/stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-requests').textContent = data.totalRequests || 0;
-                    document.getElementById('successful-requests').textContent = data.successfulRequests || 0;
-                    document.getElementById('failed-requests').textContent = data.failedRequests || 0;
-                    document.getElementById('avg-response-time').textContent = ((data.averageResponseTime || 0) / 1000).toFixed(2) + 's';
-                })
-                .catch(error => console.error('Error fetching stats:', error));
-        }
-        
-        // 更新请求列表
-        function updateRequests() {
-            fetch('/dashboard/requests')
-                .then(response => response.json())
-                .then(data => {
-                    // 检查数据是否为数组
-                    if (!Array.isArray(data)) {
-                        console.error('返回的数据不是数组:', data);
-                        return;
-                    }
-                    
-                    // 保存所有请求数据
-                    allRequests = data;
-                    
-                    // 按时间倒序排列
-                    allRequests.sort((a, b) => {
-                        const timeA = new Date(a.timestamp);
-                        const timeB = new Date(b.timestamp);
-                        return timeB - timeA;
-                    });
-                    
-                    // 更新表格
-                    updateTable();
-                    
-                    // 更新图表
-                    updateChart();
-                    
-                    // 更新分页信息
-                    updatePagination();
-                })
-                .catch(error => console.error('Error fetching requests:', error));
-        }
-        
-        // 更新表格显示
-        function updateTable() {
-            const tbody = document.getElementById('requests-tbody');
-            tbody.innerHTML = '';
-            
-            // 计算当前页的数据范围
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const currentRequests = allRequests.slice(startIndex, endIndex);
-            
-            currentRequests.forEach(request => {
-                const row = document.createElement('tr');
-                
-                // 格式化时间 - 检查时间戳是否有效
-                let timeStr = "Invalid Date";
-                if (request.timestamp) {
-                    try {
-                        const time = new Date(request.timestamp);
-                        if (!isNaN(time.getTime())) {
-                            timeStr = time.toLocaleTimeString();
-                        }
-                    } catch (e) {
-                        console.error("时间格式化错误:", e);
-                    }
-                }
-                
-                // 判断模型名称
-                let modelName = "GLM-4.5";
-                if (request.path && request.path.includes('glm-4.5v')) {
-                    modelName = "GLM-4.5V";
-                } else if (request.model) {
-                    modelName = request.model;
-                }
-                
-                // 状态样式
-                const statusClass = request.status >= 200 && request.status < 300 ? 'status-success' : 'status-error';
-                const status = request.status || "undefined";
-                
-                // 截断 User Agent，避免过长
-                let userAgent = request.user_agent || "undefined";
-                if (userAgent.length > 30) {
-                    userAgent = userAgent.substring(0, 30) + "...";
-                }
-                
-                row.innerHTML = "<td>" + timeStr + "</td>" + "<td>" + modelName + "</td>" + "<td>" + (request.method || "undefined") + "</td>" + "<td class='" + statusClass + "'>" + status + "</td>" + "<td>" + ((request.duration / 1000).toFixed(2) || "undefined") + "s</td>" + "<td title='" + (request.user_agent || "") + "'>" + userAgent + "</td>";
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // 更新分页信息
-        function updatePagination() {
-            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
-            document.getElementById('page-info').textContent = "第 " + currentPage + " 页，共 " + totalPages + " 页";
-            
-            document.getElementById('prev-page').disabled = currentPage <= 1;
-            document.getElementById('next-page').disabled = currentPage >= totalPages;
-        }
-        
-        // 更新图表
-        function updateChart() {
-            const ctx = document.getElementById('requestsChart').getContext('2d');
-            
-            // 准备图表数据 - 最近20条请求的响应时间
-            const chartData = allRequests.slice(0, 20).reverse();
-            const labels = chartData.map(req => {
-                const time = new Date(req.timestamp);
-                return time.toLocaleTimeString();
-            });
-            const responseTimes = chartData.map(req => req.duration);
-            
-            // 如果图表已存在，先销毁
-            if (requestsChart) {
-                requestsChart.destroy();
-            }
-            
-            // 创建新图表
-            requestsChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '响应时间 (s)',
-                        data: responseTimes.map(time => time / 1000),
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        tension: 0.1,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '响应时间 (s)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '时间'
-                            }
-                        }
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: '最近20条请求的响应时间趋势 (s)'
-                        }
-                    }
-                }
-            });
-        }
-        
-        // 分页按钮事件
-        document.getElementById('prev-page').addEventListener('click', function() {
-            if (currentPage > 1) {
-                currentPage--;
-                updateTable();
-                updatePagination();
-            }
-        });
-        
-        document.getElementById('next-page').addEventListener('click', function() {
-            const totalPages = Math.ceil(allRequests.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                updateTable();
-                updatePagination();
-            }
-        });
-        
-        // 初始加载
-        updateStats();
-        updateRequests();
-        
-        // 定时刷新
-        setInterval(updateStats, 5000);
-        setInterval(updateRequests, 5000);
-    </script>
-</body>
-</html>`;
+async function getDashboardHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/dashboard/dashboard.html');
+  } catch (error) {
+    console.error('Failed to read dashboard.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
+  }
 }
 
 /**
- * 处理 Dashboard 监控页面请求
- * 返回实时监控面板的HTML页面
- * @param request HTTP请求对象
- * @returns Promise<Response> HTML响应
+ * Dashboard request handlers
  */
 async function handleDashboard(request: Request): Promise<Response> {
-if (request.method !== "GET") {
-return new Response("Method not allowed", { status: 405 });
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const html = await getDashboardHTML();
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8"
+    }
+  });
 }
 
-return new Response(getDashboardHTML(), {
-status: 200,
-headers: {
-  "Content-Type": "text/html; charset=utf-8"
-}
-});
-}
-
-// 处理Dashboard统计数据
-async function handleDashboardStats(request: Request): Promise<Response> {
+function handleDashboardStats(_request: Request): Response {
   return new Response(getStatsData(), {
     status: 200,
     headers: {
@@ -2067,7 +1960,7 @@ async function handleDashboardStats(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardRequests(request: Request): Promise<Response> {
+function handleDashboardRequests(_request: Request): Response {
   return new Response(getLiveRequestsData(), {
     status: 200,
     headers: {
@@ -2076,505 +1969,25 @@ async function handleDashboardRequests(request: Request): Promise<Response> {
   });
 }
 
-
-function getDocsHTML(): string {
-return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZtoApi 文档</title>
-<style>
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
-        line-height: 1.6;
-    }
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        padding: 30px;
-    }
-    h1 {
-        color: #333;
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #007bff;
-        padding-bottom: 10px;
-    }
-    h2 {
-        color: #007bff;
-        margin-top: 30px;
-        margin-bottom: 15px;
-    }
-    h3 {
-        color: #333;
-        margin-top: 25px;
-        margin-bottom: 10px;
-    }
-    .endpoint {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-left: 4px solid #007bff;
-    }
-    .method {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        color: white;
-        font-weight: bold;
-        margin-right: 10px;
-        font-size: 14px;
-    }
-    .get { background-color: #28a745; }
-    .post { background-color: #007bff; }
-    .path {
-        font-family: monospace;
-        background-color: #e9ecef;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 16px;
-    }
-    .description {
-        margin: 15px 0;
-    }
-    .parameters {
-        margin: 15px 0;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 15px 0;
-    }
-    th, td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-    th {
-        background-color: #f8f9fa;
-        font-weight: bold;
-    }
-    .example {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin: 15px 0;
-        font-family: monospace;
-        white-space: pre-wrap;
-        overflow-x: auto;
-    }
-    .note {
-        background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
-        padding: 10px 15px;
-        margin: 15px 0;
-        border-radius: 0 4px 4px 0;
-    }
-    .response {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin: 15px 0;
-        font-family: monospace;
-        white-space: pre-wrap;
-        overflow-x: auto;
-    }
-    .tab {
-        overflow: hidden;
-        border: 1px solid #ccc;
-        background-color: #f1f1f1;
-        border-radius: 4px 4px 0 0;
-    }
-    .tab button {
-        background-color: inherit;
-        float: left;
-        border: none;
-        outline: none;
-        cursor: pointer;
-        padding: 14px 16px;
-        transition: 0.3s;
-        font-size: 16px;
-    }
-    .tab button:hover {
-        background-color: #ddd;
-    }
-    .tab button.active {
-        background-color: #ccc;
-    }
-    .tabcontent {
-        display: none;
-        padding: 6px 12px;
-        border: 1px solid #ccc;
-        border-top: none;
-        border-radius: 0 0 4px 4px;
-    }
-    .toc {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    .toc ul {
-        padding-left: 20px;
-    }
-    .toc li {
-        margin: 5px 0;
-    }
-    .toc a {
-        color: #007bff;
-        text-decoration: none;
-    }
-    .toc a:hover {
-        text-decoration: underline;
-    }
-</style>
-</head>
-<body>
-<div class="container">
-    <h1>ZtoApi 文档</h1>
-    
-    <div class="toc">
-        <h2>目录</h2>
-        <ul>
-            <li><a href="#overview">概述</a></li>
-            <li><a href="#authentication">身份验证</a></li>
-            <li><a href="#endpoints">API端点</a>
-                <ul>
-                    <li><a href="#models">获取模型列表</a></li>
-                    <li><a href="#chat-completions">聊天完成</a></li>
-                </ul>
-            </li>
-            <li><a href="#examples">使用示例</a></li>
-            <li><a href="#error-handling">错误处理</a></li>
-        </ul>
-    </div>
-    
-    <section id="overview">
-        <h2>概述</h2>
-        <p>这是一个为Z.ai GLM-4.5模型提供OpenAI兼容API接口的代理服务器。它允许你使用标准的OpenAI API格式与Z.ai的GLM-4.5模型进行交互，支持流式和非流式响应。</p>
-        <p><strong>基础URL:</strong> <code>http://localhost:9090/v1</code></p>
-        <div class="note">
-            <strong>注意:</strong> 默认端口为9090，可以通过环境变量PORT进行修改。
-        </div>
-    </section>
-    
-    <section id="authentication">
-        <h2>身份验证</h2>
-        <p>所有API请求都需要在请求头中包含有效的API密钥进行身份验证：</p>
-        <div class="example">
-Authorization: Bearer your-api-key</div>
-        <p>默认的API密钥为 <code>sk-your-key</code>，可以通过环境变量 <code>DEFAULT_KEY</code> 进行修改。</p>
-    </section>
-    
-    <section id="endpoints">
-        <h2>API端点</h2>
-        
-        <div class="endpoint" id="models">
-            <h3>获取模型列表</h3>
-            <div>
-                <span class="method get">GET</span>
-                <span class="path">/v1/models</span>
-            </div>
-            <div class="description">
-                <p>获取可用模型列表。</p>
-            </div>
-            <div class="parameters">
-                <h4>请求参数</h4>
-                <p>无</p>
-            </div>
-            <div class="response">
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "GLM-4.5",
-      "object": "model",
-      "created": 1756788845,
-      "owned_by": "z.ai"
-    }
-  ]
-}</div>
-        </div>
-        
-        <div class="endpoint" id="chat-completions">
-            <h3>聊天完成</h3>
-            <div>
-                <span class="method post">POST</span>
-                <span class="path">/v1/chat/completions</span>
-            </div>
-            <div class="description">
-                <p>基于消息列表生成模型响应。支持流式和非流式两种模式。</p>
-            </div>
-            <div class="parameters">
-                <h4>请求参数</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>参数名</th>
-                            <th>类型</th>
-                            <th>必需</th>
-                            <th>说明</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>model</td>
-                            <td>string</td>
-                            <td>是</td>
-                            <td>要使用的模型ID，例如 "GLM-4.5"</td>
-                        </tr>
-                        <tr>
-                            <td>messages</td>
-                            <td>array</td>
-                            <td>是</td>
-                            <td>消息列表，包含角色和内容</td>
-                        </tr>
-                        <tr>
-                            <td>stream</td>
-                            <td>boolean</td>
-                            <td>否</td>
-                            <td>是否使用流式响应，默认为true</td>
-                        </tr>
-                        <tr>
-                            <td>temperature</td>
-                            <td>number</td>
-                            <td>否</td>
-                            <td>采样温度，控制随机性</td>
-                        </tr>
-                        <tr>
-                            <td>max_tokens</td>
-                            <td>integer</td>
-                            <td>否</td>
-                            <td>生成的最大令牌数</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="parameters">
-                <h4>消息格式</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>字段</th>
-                            <th>类型</th>
-                            <th>说明</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>role</td>
-                            <td>string</td>
-                            <td>消息角色，可选值：system、user、assistant</td>
-                        </tr>
-                        <tr>
-                            <td>content</td>
-                            <td>string</td>
-                            <td>消息内容</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-    
-    <section id="examples">
-        <h2>使用示例</h2>
-        
-        <div class="tab">
-            <button class="tablinks active" onclick="openTab(event, 'python-tab')">Python</button>
-            <button class="tablinks" onclick="openTab(event, 'curl-tab')">cURL</button>
-            <button class="tablinks" onclick="openTab(event, 'javascript-tab')">JavaScript</button>
-        </div>
-        
-        <div id="python-tab" class="tabcontent" style="display: block;">
-            <h3>Python示例</h3>
-            <div class="example">
-import openai
-
-# 配置客户端
-client = openai.OpenAI(
-api_key="your-api-key",  # 对应 DEFAULT_KEY
-base_url="http://localhost:9090/v1"
-)
-
-# 非流式请求 - 使用GLM-4.5
-response = client.chat.completions.create(
-model="GLM-4.5",
-messages=[{"role": "user", "content": "你好，请介绍一下自己"}]
-)
-
-print(response.choices[0].message.content)
-
-
-# 流式请求 - 使用GLM-4.5
-response = client.chat.completions.create(
-model="GLM-4.5",
-messages=[{"role": "user", "content": "请写一首关于春天的诗"}],
-stream=True
-)
-
-
-for chunk in response:
-if chunk.choices[0].delta.content:
-    print(chunk.choices[0].delta.content, end="")</div>
-        </div>
-        
-        <div id="curl-tab" class="tabcontent">
-            <h3>cURL示例</h3>
-            <div class="example">
-# 非流式请求
-curl -X POST http://localhost:9090/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer your-api-key" \
--d '{
-"model": "GLM-4.5",
-"messages": [{"role": "user", "content": "你好"}],
-"stream": false
-}'
-
-# 流式请求
-curl -X POST http://localhost:9090/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer your-api-key" \
--d '{
-"model": "GLM-4.5",
-"messages": [{"role": "user", "content": "你好"}],
-"stream": true
-}'</div>
-        </div>
-        
-        <div id="javascript-tab" class="tabcontent">
-            <h3>JavaScript示例</h3>
-            <div class="example">
-const fetch = require('node-fetch');
-
-async function chatWithGLM(message, stream = false) {
-const response = await fetch('http://localhost:9090/v1/chat/completions', {
-method: 'POST',
-headers: {
-  'Content-Type': 'application/json',
-  'Authorization': 'Bearer your-api-key'
-},
-body: JSON.stringify({
-  model: 'GLM-4.5',
-  messages: [{ role: 'user', content: message }],
-  stream: stream
-})
-});
-
-if (stream) {
-// 处理流式响应
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  
-  const chunk = decoder.decode(value);
-  const lines = chunk.split('\n');
-  
-  for (const line of lines) {
-    if (line.startsWith('data: ')) {
-      const data = line.slice(6);
-      if (data === '[DONE]') {
-        console.log('\n流式响应完成');
-        return;
-      }
-      
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices[0]?.delta?.content;
-        if (content) {
-          process.stdout.write(content);
-        }
-      } catch (e) {
-        // 忽略解析错误
-      }
-    }
+async function getDocsHTML(): Promise<string> {
+  try {
+    return await Deno.readTextFile('./ui/docs/docs.html');
+  } catch (error) {
+    console.error('Failed to read docs.html:', error);
+    return '<h1>UI files not found. Please ensure ui folder exists.</h1>';
   }
 }
-} else {
-// 处理非流式响应
-const data = await response.json();
-console.log(data.choices[0].message.content);
-}
-}
 
-// 使用示例
-chatWithGLM('你好，请介绍一下JavaScript', false);</div>
-        </div>
-    </section>
-    
-    <section id="error-handling">
-        <h2>错误处理</h2>
-        <p>API使用标准HTTP状态码来表示请求的成功或失败：</p>
-        <table>
-            <thead>
-                <tr>
-                    <th>状态码</th>
-                    <th>说明</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>200 OK</td>
-                    <td>请求成功</td>
-                </tr>
-                <tr>
-                    <td>400 Bad Request</td>
-                    <td>请求格式错误或参数无效</td>
-                </tr>
-                <tr>
-                    <td>401 Unauthorized</td>
-                    <td>API密钥无效或缺失</td>
-                </tr>
-                <tr>
-                    <td>502 Bad Gateway</td>
-                    <td>上游服务错误</td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="note">
-            <strong>注意:</strong> 在调试模式下，服务器会输出详细的日志信息，可以通过设置环境变量 DEBUG_MODE=true 来启用。
-        </div>
-    </section>
-</div>
-
-<script>
-    function openTab(evt, tabName) {
-        var i, tabcontent, tablinks;
-        tabcontent = document.getElementsByClassName("tabcontent");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].style.display = "none";
-        }
-        tablinks = document.getElementsByClassName("tablinks");
-        for (i = 0; i < tablinks.length; i++) {
-            tablinks[i].className = tablinks[i].className.replace(" active", "");
-        }
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.className += " active";
-    }
-</script>
-</body>
-</html>`;
-}
-
-// 处理API文档页面
+/**
+ * Docs page handler
+ */
 async function handleDocs(request: Request): Promise<Response> {
   if (request.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  return new Response(getDocsHTML(), {
+  const html = await getDocsHTML();
+  return new Response(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8"
@@ -2582,114 +1995,155 @@ async function handleDocs(request: Request): Promise<Response> {
   });
 }
 
-// 主HTTP服务器
-async function main() {
-console.log(`OpenAI兼容API服务器启动`);
-console.log(`支持的模型: ${SUPPORTED_MODELS.map(m => `${m.id} (${m.name})`).join(', ')}`);
-console.log(`上游: ${UPSTREAM_URL}`);
-console.log(`Debug模式: ${DEBUG_MODE}`);
-console.log(`默认流式响应: ${DEFAULT_STREAM}`);
-console.log(`Dashboard启用: ${DASHBOARD_ENABLED}`);
+async function handleStatic(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const path = url.pathname.substring(4); // remove /ui/ prefix
+  const filePath = `./ui/${path}`;
+  
+  try {
+    const fileBytes = await Deno.readFile(filePath);
+    const contentType = getContentType(path);
+    return new Response(fileBytes.buffer as ArrayBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=3600"
+      }
+    });
+  } catch (error) {
+    console.error(`Failed to serve static file ${filePath}:`, error);
+    return new Response("File not found", { status: 404 });
+  }
+}
 
-// 检测是否在Deno Deploy上运行
+function getContentType(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'html': return 'text/html; charset=utf-8';
+    case 'css': return 'text/css; charset=utf-8';
+    case 'js': return 'application/javascript; charset=utf-8';
+    default: return 'application/octet-stream';
+  }
+}
+
+// Main HTTP server entrypoint
+async function main() {
+console.log(`OpenAI-compatible API server starting`);
+console.log(`Supported models: ${SUPPORTED_MODELS.map(m => `${m.id} (${m.name})`).join(', ')}`);
+console.log(`Upstream: ${UPSTREAM_URL}`);
+console.log(`Debug mode: ${DEBUG_MODE}`);
+console.log(`Default streaming: ${DEFAULT_STREAM}`);
+console.log(`Dashboard enabled: ${DASHBOARD_ENABLED}`);
+
+// Detect if running on Deno Deploy
 const isDenoDeploy = Deno.env.get("DENO_DEPLOYMENT_ID") !== undefined;
 
 if (isDenoDeploy) {
-  // Deno Deploy环境
-  console.log("运行在Deno Deploy环境中");
+  console.log("Running on Deno Deploy");
   Deno.serve(handleRequest);
 } else {
-  // 本地或自托管环境
   const port = parseInt(Deno.env.get("PORT") || "9090");
-  console.log(`运行在本地环境中，端口: ${port}`);
-  
+  console.log(`Running locally on port: ${port}`);
+
   if (DASHBOARD_ENABLED) {
-    console.log(`Dashboard已启用，访问地址: http://localhost:${port}/dashboard`);
+    console.log(`Dashboard enabled at: http://localhost:${port}/dashboard`);
   }
-  
+
   const server = Deno.listen({ port });
-  
+
   for await (const conn of server) {
     handleHttp(conn);
   }
 }
 }
 
-// 处理HTTP连接（用于本地环境）
+// Handle HTTP connection (self-hosted/local)
 async function handleHttp(conn: Deno.Conn) {
+  // Note: Deno.serveHttp is deprecated but still works for now
+  // Future migration to Deno 2 will require refactoring this entire section
   const httpConn = Deno.serveHttp(conn);
-  
+
   while (true) {
     const requestEvent = await httpConn.nextRequest();
     if (!requestEvent) break;
-    
+
     const { request, respondWith } = requestEvent;
     const url = new URL(request.url);
     const startTime = Date.now();
     const userAgent = request.headers.get("User-Agent") || "";
 
-try {
-  // 路由分发
-  if (url.pathname === "/") {
-    const response = await handleIndex(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/v1/models") {
-    const response = await handleModels(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/v1/chat/completions") {
-    const response = await handleChatCompletions(request);
-    await respondWith(response);
-    // 请求统计已在handleChatCompletions中记录
-  } else if (url.pathname === "/docs") {
-    const response = await handleDocs(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard" && DASHBOARD_ENABLED) {
-    const response = await handleDashboard(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/stats" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardStats(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
-    const response = await handleDashboardRequests(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-  } else {
-    const response = await handleOptions(request);
-    await respondWith(response);
-    recordRequestStats(startTime, url.pathname, response.status);
-    addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+    try {
+      // Routing
+      if (url.pathname === "/") {
+        const response = await handleIndex(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname.startsWith("/ui/")) {
+        const response = await handleStatic(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/v1/models") {
+        const response = await handleModels(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/v1/chat/completions") {
+        const response = await handleChatCompletions(request);
+        await respondWith(response);
+        // stats recorded inside handleChatCompletions
+      } else if (url.pathname === "/docs") {
+        const response = await handleDocs(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard" && DASHBOARD_ENABLED) {
+        const response = await handleDashboard(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard/stats" && DASHBOARD_ENABLED) {
+        const response = await handleDashboardStats(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
+        const response = await handleDashboardRequests(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else {
+        const response = await handleOptions(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      }
+    } catch (error) {
+      debugLog("Error handling request: %v", error);
+      const response = new Response("Internal Server Error", { status: 500 });
+      await respondWith(response);
+      recordRequestStats(startTime, url.pathname, 500);
+      addLiveRequest(request.method, url.pathname, 500, Date.now() - startTime, userAgent);
+    }
   }
-} catch (error) {
-  debugLog("处理请求时出错: %v", error);
-  const response = new Response("Internal Server Error", { status: 500 });
-  await respondWith(response);
-  recordRequestStats(startTime, url.pathname, 500);
-  addLiveRequest(request.method, url.pathname, 500, Date.now() - startTime, userAgent);
-}
-}
 }
 
-// 处理HTTP请求（用于Deno Deploy环境）
+// Handle HTTP requests (Deno Deploy)
 async function handleRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const startTime = Date.now();
   const userAgent = request.headers.get("User-Agent") || "";
 
   try {
-    // 路由分发
+    // Routing
     if (url.pathname === "/") {
       const response = await handleIndex(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname.startsWith("/ui/")) {
+      const response = await handleStatic(request);
       recordRequestStats(startTime, url.pathname, response.status);
       addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;
@@ -2700,7 +2154,7 @@ async function handleRequest(request: Request): Promise<Response> {
       return response;
     } else if (url.pathname === "/v1/chat/completions") {
       const response = await handleChatCompletions(request);
-      // 请求统计已在handleChatCompletions中记录
+      // stats recorded inside handleChatCompletions
       return response;
     } else if (url.pathname === "/docs") {
       const response = await handleDocs(request);
@@ -2729,12 +2183,14 @@ async function handleRequest(request: Request): Promise<Response> {
       return response;
     }
   } catch (error) {
-    debugLog("处理请求时出错: %v", error);
+    debugLog("Error handling request: %v", error);
     recordRequestStats(startTime, url.pathname, 500);
     addLiveRequest(request.method, url.pathname, 500, Date.now() - startTime, userAgent);
     return new Response("Internal Server Error", { status: 500 });
   }
 }
 
-// 启动服务器
-main();
+// Start server
+if (import.meta.main) {
+  main();
+}

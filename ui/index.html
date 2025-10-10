@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZtoApi - OpenAI-compatible API proxy</title>
+    <link rel="stylesheet" href="/ui/index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="floating-shapes"></div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <span class="sun-icon">☀️</span>
+        <span class="moon-icon">🌙</span>
+    </button>
+
+    <!-- Navigation dots -->
+    <nav class="nav-dots">
+        <a href="#hero" class="nav-dot active" data-section="hero"></a>
+        <a href="#links" class="nav-dot" data-section="links"></a>
+        <a href="#features" class="nav-dot" data-section="features"></a>
+    </nav>
+
+    <div class="container">
+        <section id="hero" class="hero-section">
+            <header class="hero-header">
+                <div class="logo-container">
+                    <h1 class="logo">ZtoApi</h1>
+                    <div class="logo-glow"></div>
+                </div>
+                <div class="subtitle">OpenAI-compatible proxy for Z.ai GLM-4.5</div>
+                <p class="hero-description">A high-performance, easy-to-deploy API proxy that allows you to use OpenAI-compatible format to access Z.ai's GLM-4.5, GLM-4.6, and GLM-4.5V models.</p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="99.9">0</span>
+                        <span class="stat-label">% Uptime</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">0.02ms</span>
+                        <span class="stat-label">Average Response Time</span>
+                        <small style="display: block; color: var(--text-secondary); font-size: 0.75rem; margin-top: 5px;">(excluding the z.ai request time)</small>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" data-target="1000">0</span>
+                        <span class="stat-label">+ Requests</span>
+                    </div>
+                </div>
+            </header>
+        </section>
+
+        <section id="links" class="links-section">
+            <div class="section-header">
+                <h2 class="section-title">Quick Access</h2>
+                <div class="title-underline"></div>
+            </div>
+            
+            <div class="links">
+                <div class="link-card" data-tilt>
+                    <div class="card-icon">📖</div>
+                    <h3>API Docs</h3>
+                    <p>View full API documentation and usage examples.</p>
+                    <a href="/docs" class="card-link">
+                        <span>View Docs</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <div class="card-glow"></div>
+                    <div class="card-shine"></div>
+                </div>
+
+                <div class="link-card" data-tilt>
+                    <div class="card-icon">📊</div>
+                    <h3>Dashboard</h3>
+                    <p>Real-time monitoring of API calls, statistics, and performance.</p>
+                    <a href="/dashboard" class="card-link">
+                        <span>View Dashboard</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <div class="card-glow"></div>
+                    <div class="card-shine"></div>
+                </div>
+
+                <div class="link-card" data-tilt>
+                    <div class="card-icon">🤖</div>
+                    <h3>Models</h3>
+                    <p>See the available AI models and their details.</p>
+                    <a href="/v1/models" class="card-link">
+                        <span>View Models</span>
+                        <span class="link-arrow">→</span>
+                    </a>
+                    <div class="card-glow"></div>
+                    <div class="card-shine"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="features" class="features-section">
+            <div class="section-header">
+                <h2 class="section-title">Features</h2>
+                <div class="title-underline"></div>
+            </div>
+            
+            <div class="feature-list">
+                <div class="feature-item" data-aos="fade-up">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🔄</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>OpenAI API Compatibility</h3>
+                    <p>Fully compatible with OpenAI API format — use your preferred SDK!</p>
+                </div>
+
+                <div class="feature-item" data-aos="fade-up" data-aos-delay="100">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🌊</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Streaming Support</h3>
+                    <p>Supports real-time streaming output for a better user experience</p>
+                </div>
+
+                <div class="feature-item" data-aos="fade-up" data-aos-delay="200">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🔐</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Authentication</h3>
+                    <p>API key validation to secure the service</p>
+                </div>
+
+                <div class="feature-item" data-aos="fade-up" data-aos-delay="300">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">🛠️</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Flexible Configuration</h3>
+                    <p>Configured via environment variables</p>
+                </div>
+
+                <div class="feature-item" data-aos="fade-up" data-aos-delay="400">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">📝</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Thinking Display</h3>
+                    <p>Intelligently processes and displays the model's thinking</p>
+                </div>
+
+                <div class="feature-item" data-aos="fade-up" data-aos-delay="500">
+                    <div class="feature-icon-wrapper">
+                        <div class="feature-icon">📊</div>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Real-time Monitoring</h3>
+                    <p>Provides a web dashboard to show live forwarding and stats</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <p>© 2024 ZtoApi. Powered by Deno & Z.ai GLM-4.5, GLM-4.6, GLM-4.5V</p>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">GitHub</a>
+                    <a href="#" class="footer-link">Support</a>
+                    <a href="#" class="footer-link">Community</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scroll to top button -->
+    <button class="scroll-to-top" id="scrollToTop" aria-label="Scroll to top">
+        <span>↑</span>
+    </button>
+
+    <script src="/ui/index.js"></script>
+</body>
+</html>

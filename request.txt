@@ -1,0 +1,21 @@
+POST /api/chat/completions?timestamp=1759737067843&requestId=07f59daf-a7fe-42f9-bcc5-737a4bdb7377&user_id=15d4e52a-b322-4ac1-b9cf-8e76fa425237&version=0.0.1&platform=web&token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE1ZDRlNTJhLWIzMjItNGFjMS1iOWNmLThlNzZmYTQyNTIzNyIsImVtYWlsIjoibG91c3lib29rOTRAZ21haWwuY29tIn0.NwjJ4oquT5Vo6E-li6uCBHG7NcXAKmHsG2QnOP9X6lH8YkYsd51xgXnzSrnIui0KhpI1F3DUvh6mboDNNZm0SQ&user_agent=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F141.0.0.0+Safari%2F537.36+Edg%2F141.0.0.0&language=en-US&languages=en-US%2Cen%2Csi&timezone=Asia%2FColombo&cookie_enabled=true&screen_width=1600&screen_height=900&screen_resolution=1600x900&viewport_height=774&viewport_width=667&viewport_size=667x774&color_depth=24&pixel_ratio=1&current_url=https%3A%2F%2Fchat.z.ai%2Fc%2F2d3d5ea0-d6f3-4719-b691-5f567bda5633&pathname=%2Fc%2F2d3d5ea0-d6f3-4719-b691-5f567bda5633&search=&hash=&host=chat.z.ai&hostname=chat.z.ai&protocol=https%3A&referrer=&title=Z.ai+Chat+-+Free+AI+powered+by+GLM-4.6+%26+GLM-4.5&timezone_offset=-330&local_time=2025-10-06T07%3A51%3A07.846Z&utc_time=Mon%2C+06+Oct+2025+07%3A51%3A07+GMT&is_mobile=false&is_touch=false&max_touch_points=0&browser_name=Chrome&os_name=Windows&signature_timestamp=1759737067849 HTTP/1.1
+Accept: */*
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-US
+Authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE1ZDRlNTJhLWIzMjItNGFjMS1iOWNmLThlNzZmYTQyNTIzNyIsImVtYWlsIjoibG91c3lib29rOTRAZ21haWwuY29tIn0.NwjJ4oquT5Vo6E-li6uCBHG7NcXAKmHsG2QnOP9X6lH8YkYsd51xgXnzSrnIui0KhpI1F3DUvh6mboDNNZm0SQ
+Connection: keep-alive
+Content-Length: 26848
+Content-Type: application/json
+Cookie: _gcl_au=1.1.800283340.1757155600; _ga=GA1.1.1677034540.1757155600; sensorsdata2015jssdkcross=%7B%22distinct_id%22%3A%2278801754579206051%22%2C%22first_id%22%3A%2219923bab6da287-01ae09b132c7526-4c657b58-1440000-19923bab6db58f%22%2C%22props%22%3A%7B%22%24latest_traffic_source_type%22%3A%22%E4%BB%98%E8%B4%B9%E5%B9%BF%E5%91%8A%E6%B5%81%E9%87%8F%22%2C%22%24latest_search_keyword%22%3A%22%E6%9C%AA%E5%8F%96%E5%88%B0%E5%80%BC_%E7%9B%B4%E6%8E%A5%E6%89%93%E5%BC%80%22%2C%22%24latest_referrer%22%3A%22%22%2C%22%24latest_utm_source%22%3A%22zai%22%2C%22%24latest_utm_medium%22%3A%22link%22%2C%22%24latest_utm_campaign%22%3A%22Platform_Ops%22%2C%22%24latest_utm_content%22%3A%22glm-coding-plan%22%2C%22%24latest_utm_term%22%3A%22guide%22%7D%2C%22identities%22%3A%22eyIkaWRlbnRpdHlfY29va2llX2lkIjoiMTk5MjNiYWI2ZGEyODctMDFhZTA5YjEzMmM3NTI2LTRjNjU3YjU4LTE0NDAwMDAtMTk5MjNiYWI2ZGI1OGYiLCIkaWRlbnRpdHlfbG9naW5faWQiOiI3ODgwMTc1NDU3OTIwNjA1MSJ9%22%2C%22history_login_id%22%3A%7B%22name%22%3A%22%24identity_login_id%22%2C%22value%22%3A%2278801754579206051%22%7D%7D; __stripe_mid=614ff142-c0f0-42ff-837d-5624e9fa83c75f77b3; ph_phc_TXdpocbGVeZVm5VJmAsHTMrCofBQu3e0kN8HGMNGTVW_posthog=%7B%22distinct_id%22%3A%22019923b9-ada5-7836-8640-2fc745a6dada%22%2C%22%24sesid%22%3A%5B1757241466494%2C%22019923b9-ad9d-7024-a726-b5b63c566929%22%2C1757240995228%5D%7D; sensorsdata2015jssdksession=%7B%22session_id%22%3A%2219923bab6fe63e04f7101559d408c4c657b58144000019923bab6ff857%22%2C%22first_session_time%22%3A1757241063165%2C%22latest_session_time%22%3A1757242008420%7D; _ga_Z8QTHYBHP3=GS2.1.s1757850559$o2$g1$t1757850682$j10$l0$h0; acw_tc=0a094e3917597369658316612e51a1a6dacd6339c1f6b1fe906e6e4e74df0e; Lda_aKUr6BGRn=hipodi.com/r/v2?; Lda_aKUr6BGRr=0; token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjE1ZDRlNTJhLWIzMjItNGFjMS1iOWNmLThlNzZmYTQyNTIzNyIsImVtYWlsIjoibG91c3lib29rOTRAZ21haWwuY29tIn0.NwjJ4oquT5Vo6E-li6uCBHG7NcXAKmHsG2QnOP9X6lH8YkYsd51xgXnzSrnIui0KhpI1F3DUvh6mboDNNZm0SQ; Fm_kZf8ZQvmX=1; Ac_aqK8DtrDS=9
+Host: chat.z.ai
+Origin: https://chat.z.ai
+Referer: https://chat.z.ai/c/2d3d5ea0-d6f3-4719-b691-5f567bda5633
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0
+X-FE-Version: prod-fe-1.0.95
+X-Signature: 5b2b42e977feb62ff51ab5208392e05f04e3e102730e9d53ce3fb2caeefe840a
+sec-ch-ua: "Microsoft Edge";v="141", "Not?A_Brand";v="8", "Chromium";v="141"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Windows"
