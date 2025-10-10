@@ -20,15 +20,6 @@
  * @since 2024
  */
 
-// Import Anthropic API integration
-import {
-  handleAnthropicMessages,
-  handleAnthropicModels,
-  handleAnthropicCountTokens,
-  handleAnthropicMessageBatches,
-  setAnthropicHeaders as _setAnthropicHeaders,
-  validateAnthropicApiKey as _validateAnthropicApiKey
-} from "./anthropic.ts";
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 declare global {
@@ -2122,30 +2113,6 @@ async function handleHttp(conn: Deno.Conn) {
         await respondWith(response);
         recordRequestStats(startTime, url.pathname, response.status);
         addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      } else if (url.pathname === "/anthropic/v1/messages") {
-        // Anthropic Messages API endpoint
-        const response = await handleAnthropicMessages(request, handleChatCompletions);
-        await respondWith(response);
-        recordRequestStats(startTime, url.pathname, response.status);
-        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      } else if (url.pathname === "/anthropic/v1/models") {
-        // Anthropic Models API endpoint
-        const response = handleAnthropicModels();
-        await respondWith(response);
-        recordRequestStats(startTime, url.pathname, response.status);
-        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
-        // Anthropic Count Tokens API endpoint
-        const response = await handleAnthropicCountTokens(request);
-        await respondWith(response);
-        recordRequestStats(startTime, url.pathname, response.status);
-        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      } else if (url.pathname === "/anthropic/v1/messages/batches") {
-        // Anthropic Message Batches API endpoint
-        const response = await handleAnthropicMessageBatches(request, handleChatCompletions);
-        await respondWith(response);
-        recordRequestStats(startTime, url.pathname, response.status);
-        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       } else {
         const response = await handleOptions(request);
         await respondWith(response);
@@ -2206,30 +2173,6 @@ async function handleRequest(request: Request): Promise<Response> {
       return response;
     } else if (url.pathname === "/dashboard/requests" && DASHBOARD_ENABLED) {
       const response = await handleDashboardRequests(request);
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/anthropic/v1/messages") {
-      // Anthropic Messages API endpoint
-      const response = await handleAnthropicMessages(request, handleChatCompletions);
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/anthropic/v1/models") {
-      // Anthropic Models API endpoint
-      const response = handleAnthropicModels();
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
-      // Anthropic Count Tokens API endpoint
-      const response = await handleAnthropicCountTokens(request);
-      recordRequestStats(startTime, url.pathname, response.status);
-      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
-      return response;
-    } else if (url.pathname === "/anthropic/v1/messages/batches") {
-      // Anthropic Message Batches API endpoint
-      const response = await handleAnthropicMessageBatches(request, handleChatCompletions);
       recordRequestStats(startTime, url.pathname, response.status);
       addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;

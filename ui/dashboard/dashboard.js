@@ -93,21 +93,11 @@ function updateTable() {
         }
 
         let modelName = "GLM-4.5";
-        let apiType = "OpenAI";
-        
-        if (request.path && request.path.includes('anthropic')) {
-            apiType = "Anthropic";
-        }
         
         if (request.path && request.path.includes('glm-4.5v')) {
             modelName = "GLM-4.5V";
         } else if (request.model) {
             modelName = request.model;
-        }
-        
-        // Add API type prefix to model name for clarity
-        if (apiType === "Anthropic") {
-            modelName = `${modelName} (${apiType})`;
         }
 
         const statusClass = request.status >= 200 && request.status < 300 ? 'status-success' : 'status-error';
