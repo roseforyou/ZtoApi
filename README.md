@@ -1,5 +1,7 @@
 # 🚀 ZtoApi - Your Friendly OpenAI-compatible API Proxy Server! 🌟
 
+> TODO: Add anthropic api for claude code, and etc under /anthropic endpoint, using gpt-tokenizer for token counting
+
 ![Deno](https://img.shields.io/badge/deno-v1.40+-blue.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
