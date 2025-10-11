@@ -3,7 +3,7 @@
  * ZtoApi - OpenAI兼容API代理服务器
  * 
  * 功能概述：
- * - 为 Z.ai 的 GLM-4.5 模型提供 OpenAI 兼容的 API 接口
+ * - 为 Z.ai 的 GLM-4.5, GLM-4.5V, GLM-4.6 等模型提供 OpenAI 兼容的 API 接口
  * - 支持流式和非流式响应模式
  * - 提供实时监控 Dashboard 功能
  * - 支持匿名 token 自动获取
@@ -20,6 +20,8 @@
  * @version 2.0.0
  * @since 2024
  */
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
 declare namespace Deno {
   interface Conn {
     readonly rid: number;
@@ -218,9 +220,9 @@ interface Model {
 const THINK_TAGS_MODE = "strip";
 
 // 伪装前端头部（来自抓包分析）
-const X_FE_VERSION = "prod-fe-1.0.70";
-const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0";
-const SEC_CH_UA = "\"Not;A=Brand\";v=\"99\", \"Microsoft Edge\";v=\"139\", \"Chromium\";v=\"139\"";
+const X_FE_VERSION = "prod-fe-1.0.94";
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+const SEC_CH_UA = "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"";
 const SEC_CH_UA_MOB = "?0";
 const SEC_CH_UA_PLAT = "\"Windows\"";
 const ORIGIN_BASE = "https://chat.z.ai";
@@ -282,6 +284,21 @@ const SUPPORTED_MODELS: ModelConfig[] = [
       top_p: 0.6,
       temperature: 0.8
     }
+  },
+  {
+    id: "glm-4.6",
+    name: "GLM-4.6",
+    upstreamId: "GLM-4-6-API-V1",
+    capabilities: {
+      vision: false,
+      mcp: true,
+      thinking: true
+    },
+    defaultParams: {
+      top_p: 0.95,
+      temperature: 0.6,
+      max_tokens: 80000
+    }
   }
 ];
 
@@ -319,7 +336,10 @@ function normalizeModelId(modelId: string): string {
     'glm-4.5': '0727-360B-API',
     'glm4.5': '0727-360B-API',
     'glm_4.5': '0727-360B-API',
-    'gpt-4': '0727-360B-API'  // 向后兼容
+    'gpt-4': '0727-360B-API',  // 向后兼容
+    'glm-4.6': 'glm-4.6',
+    'glm4.6': 'glm-4.6',
+    'glm_4.6': 'glm-4.6'
   };
   
   const mapped = modelMappings[normalized];
@@ -660,117 +680,125 @@ async function getAnonymousToken(): Promise<string> {
   }
 }
 
-// 调用上游API
+
+/**
+ * 生成Z.ai API请求签名
+ * @param e "requestId,request_id,timestamp,timestamp,user_id,user_id"
+ * @param t 用户最新消息
+ * @param timestamp 时间戳 (毫秒)
+ * @returns { signature: string, timestamp: number }
+ */
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
+  const r = String(timestamp);
+  const i = `${e}|${t}|${r}`;
+  const n = Math.floor(timestamp / (5 * 60 * 1000));
+  const key = new TextEncoder().encode("junjie");
+
+  // 第一层 HMAC
+  const firstHmacKey = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const firstSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    firstHmacKey,
+    new TextEncoder().encode(String(n))
+  );
+  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  // 第二层 HMAC
+  const secondHmacKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(o),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const secondSignatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    secondHmacKey,
+    new TextEncoder().encode(i)
+  );
+  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  debugLog("签名生成成功: %s", signature);
+  return {
+      signature,
+      timestamp
+  };
+}
+
 async function callUpstreamWithHeaders(
-  upstreamReq: UpstreamRequest, 
-  refererChatID: string, 
+  upstreamReq: UpstreamRequest,
+  refererChatID: string,
   authToken: string
 ): Promise<Response> {
   try {
     debugLog("调用上游API: %s", UPSTREAM_URL);
-    
-    // 特别检查和记录全方位多模态内容
-    const hasMultimedia = upstreamReq.messages.some(msg => 
-      Array.isArray(msg.content) && 
-      msg.content.some(block => 
-        ['image_url', 'video_url', 'document_url', 'audio_url'].includes(block.type)
-      )
-    );
-    
-    if (hasMultimedia) {
-      debugLog("🎯 请求包含多模态数据，正在发送到上游...");
-      
-      for (let i = 0; i < upstreamReq.messages.length; i++) {
-        const msg = upstreamReq.messages[i];
-        if (Array.isArray(msg.content)) {
-          for (let j = 0; j < msg.content.length; j++) {
-            const block = msg.content[j];
-            
-            // 处理图像
-            if (block.type === 'image_url' && block.image_url?.url) {
-              const url = block.image_url.url;
-              if (url.startsWith('data:image/')) {
-                const mimeMatch = url.match(/data:image\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                const sizeKB = Math.round(url.length * 0.75 / 1024); // base64 大约是原文件的 1.33 倍
-                debugLog("🖼️ 消息[%d] 图像[%d]: %s格式, 数据长度: %d字符 (~%dKB)", 
-                  i, j, format, url.length, sizeKB);
-                
-                // 图片大小警告
-                if (sizeKB > 1000) {
-                  debugLog("⚠️  图片较大 (%dKB)，可能导致上游处理失败", sizeKB);
-                  debugLog("💡 建议: 将图片压缩到 500KB 以下");
-                } else if (sizeKB > 500) {
-                  debugLog("⚠️  图片偏大 (%dKB)，建议压缩", sizeKB);
-                }
-              } else {
-                debugLog("🔗 消息[%d] 图像[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理视频
-            if (block.type === 'video_url' && block.video_url?.url) {
-              const url = block.video_url.url;
-              if (url.startsWith('data:video/')) {
-                const mimeMatch = url.match(/data:video\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎥 消息[%d] 视频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 视频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理文档
-            if (block.type === 'document_url' && block.document_url?.url) {
-              const url = block.document_url.url;
-              if (url.startsWith('data:application/')) {
-                const mimeMatch = url.match(/data:application\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("📄 消息[%d] 文档[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 文档[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-            
-            // 处理音频
-            if (block.type === 'audio_url' && block.audio_url?.url) {
-              const url = block.audio_url.url;
-              if (url.startsWith('data:audio/')) {
-                const mimeMatch = url.match(/data:audio\/([^;]+)/);
-                const format = mimeMatch ? mimeMatch[1] : 'unknown';
-                debugLog("🎵 消息[%d] 音频[%d]: %s格式, 数据长度: %d字符", 
-                  i, j, format, url.length);
-              } else {
-                debugLog("🔗 消息[%d] 音频[%d]: 外部URL - %s", i, j, url);
-              }
-            }
-          }
-        }
+
+    // 1. 解码JWT获取user_id
+    let userId = "unknown";
+    try {
+      const tokenParts = authToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(new TextDecoder().decode(decodeBase64(tokenParts[1])));
+        userId = payload.id || userId;
+        debugLog("从JWT解析到 user_id: %s", userId);
       }
+    } catch (e) {
+      debugLog("解析JWT失败: %v", e);
     }
-    
-    debugLog("上游请求体: %s", JSON.stringify(upstreamReq));
-    
-    const response = await fetch(UPSTREAM_URL, {
+
+    // 2. 准备签名所需参数
+    const timestamp = Date.now();
+    const requestId = crypto.randomUUID();
+    const userMessage = upstreamReq.messages.filter(m => m.role === 'user').pop()?.content;
+    const lastMessageContent = typeof userMessage === 'string' ? userMessage :
+      (Array.isArray(userMessage) ? userMessage.find(c => c.type === 'text')?.text || "" : "");
+
+    if (!lastMessageContent) {
+      throw new Error("无法获取用于签名的用户消息内容");
+    }
+
+    const e = `requestId,${requestId},timestamp,${timestamp},user_id,${userId}`;
+
+    // 3. 生成新签名
+    const { signature } = await generateSignature(e, lastMessageContent, timestamp);
+    debugLog("生成新版签名: %s", signature);
+
+    const reqBody = JSON.stringify(upstreamReq);
+    debugLog("上游请求体: %s", reqBody);
+
+    // 4. 构建带新参数的URL和Headers
+    const params = new URLSearchParams({
+        timestamp: timestamp.toString(),
+        requestId: requestId,
+        user_id: userId,
+        token: authToken,
+        current_url: `${ORIGIN_BASE}/c/${refererChatID}`,
+        pathname: `/c/${refererChatID}`,
+        signature_timestamp: timestamp.toString()
+    });
+    const fullURL = `${UPSTREAM_URL}?${params.toString()}`;
+
+    const response = await fetch(fullURL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
         "User-Agent": BROWSER_UA,
         "Authorization": `Bearer ${authToken}`,
-        "Accept-Language": "zh-CN",
-        "sec-ch-ua": SEC_CH_UA,
-        "sec-ch-ua-mobile": SEC_CH_UA_MOB,
-        "sec-ch-ua-platform": SEC_CH_UA_PLAT,
         "X-FE-Version": X_FE_VERSION,
+        "X-Signature": signature,
         "Origin": ORIGIN_BASE,
         "Referer": `${ORIGIN_BASE}/c/${refererChatID}`
       },
-      body: JSON.stringify(upstreamReq)
+      body: reqBody
     });
-    
+
     debugLog("上游响应状态: %d %s", response.status, response.statusText);
     return response;
   } catch (error) {
@@ -2058,7 +2086,7 @@ headers: {
 }
 
 // 处理Dashboard统计数据
-async function handleDashboardStats(request: Request): Promise<Response> {
+async function handleDashboardStats(_request: Request): Promise<Response> {
   return new Response(getStatsData(), {
     status: 200,
     headers: {
@@ -2067,7 +2095,7 @@ async function handleDashboardStats(request: Request): Promise<Response> {
   });
 }
 
-async function handleDashboardRequests(request: Request): Promise<Response> {
+async function handleDashboardRequests(_request: Request): Promise<Response> {
   return new Response(getLiveRequestsData(), {
     status: 200,
     headers: {
