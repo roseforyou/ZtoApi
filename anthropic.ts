@@ -142,32 +142,69 @@ interface AnthropicError {
 interface ClaudeModelMapping {
   claudeModel: string;
   zaiModel: string;
-  category: "haiku" | "sonnet" | "opus";
+  category: "haiku" | "sonnet" | "opus" | "glm";
   description: string;
 }
 
 const CLAUDE_MODEL_MAPPINGS: ClaudeModelMapping[] = [
-  // Haiku models (fast, lightweight)
-  { claudeModel: "claude-3-haiku-20240307", zaiModel: "glm-4.5v", category: "haiku", description: "Fast multimodal model" },
-  { claudeModel: "claude-3-5-haiku-20241022", zaiModel: "glm-4.5v", category: "haiku", description: "Latest fast multimodal model" },
+  // === CLAUDE 4.x SERIES (ACTUAL EXISTING MODELS) ===
+  // Sonnet 4.5 (Latest Sonnet)
+  { claudeModel: "claude-sonnet-4-5-20250929", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "🚀 LATEST! Claude Sonnet 4.5 (Sep 2025)" },
+  { claudeModel: "claude-4.5-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "🚀 Claude Sonnet 4.5 generic" },
   
-  // Sonnet models (balanced performance)
-  { claudeModel: "claude-3-sonnet-20240229", zaiModel: "0727-360B-API", category: "sonnet", description: "Balanced text model" },
-  { claudeModel: "claude-3-5-sonnet-20240620", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Latest balanced model" },
-  { claudeModel: "claude-3-5-sonnet-20241022", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Most recent sonnet model" },
+  // Opus 4.1 (Latest Opus - Most Capable)
+  { claudeModel: "claude-opus-4-1-20250805", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "🏆 LATEST! Claude Opus 4.1 (Aug 2025) - Ultimate capability" },
+  { claudeModel: "claude-4.1-opus", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "🏆 Claude Opus 4.1 generic" },
   
-  // Opus models (highest capability)
-  { claudeModel: "claude-3-opus-20240229", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "Most capable model" },
+  // Opus 4.0 
+  { claudeModel: "claude-opus-4-20250514", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "🏆 Claude Opus 4.0 (May 2025)" },
+  { claudeModel: "claude-4-opus", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "🏆 Claude Opus 4.0 generic" },
   
-  // Generic model names
-  { claudeModel: "claude-3-haiku", zaiModel: "glm-4.5v", category: "haiku", description: "Generic haiku model" },
-  { claudeModel: "claude-3-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Generic sonnet model" },
-  { claudeModel: "claude-3-opus", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "Generic opus model" },
+  // Sonnet 4.0
+  { claudeModel: "claude-sonnet-4-20250514", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "🎯 Claude Sonnet 4.0 (May 2025)" },
+  { claudeModel: "claude-4-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "🎯 Claude Sonnet 4.0 generic" },
+
+  // === CLAUDE 3.x SERIES ===
+  // Claude 3.7 Sonnet (New!)
+  { claudeModel: "claude-3-7-sonnet-20250219", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "⚡ NEW! Claude 3.7 Sonnet (Feb 2025)" },
+  { claudeModel: "claude-3.7-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "⚡ Claude 3.7 Sonnet generic" },
   
-  // GLM compatibility mappings
-  { claudeModel: "glm-4.5", zaiModel: "0727-360B-API", category: "sonnet", description: "GLM-4.5 compatibility mapping" },
-  { claudeModel: "glm-4.6", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "GLM-4.6 compatibility mapping" },
-  { claudeModel: "glm-4.5v", zaiModel: "glm-4.5v", category: "haiku", description: "GLM-4.5V compatibility mapping" },
+  // Claude 3.5 Haiku (Latest Haiku)
+  { claudeModel: "claude-3-5-haiku-20241022", zaiModel: "glm-4.5v", category: "haiku", description: "🚀 Claude 3.5 Haiku (Oct 2024) - Fast multimodal" },
+  
+  // Claude 3 Haiku (Original)
+  { claudeModel: "claude-3-haiku-20240307", zaiModel: "glm-4.5v", category: "haiku", description: "Claude 3 Haiku (Mar 2024) - Fast lightweight" },
+  
+  // Previous Claude 3.5 Sonnets (keeping for compatibility)
+  { claudeModel: "claude-3-5-sonnet-20241022", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Claude 3.5 Sonnet (Oct 2024)" },
+  { claudeModel: "claude-3-5-sonnet-20240620", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Claude 3.5 Sonnet (June 2024)" },
+  
+  // Claude 3 Sonnet/Opus (Original)
+  { claudeModel: "claude-3-sonnet-20240229", zaiModel: "0727-360B-API", category: "sonnet", description: "Claude 3 Sonnet (Feb 2024) - Balanced" },
+  { claudeModel: "claude-3-opus-20240229", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "Claude 3 Opus (Feb 2024) - High capability" },
+  
+  // === GENERIC MODEL NAMES (Auto-Latest) ===
+  { claudeModel: "claude-3-haiku", zaiModel: "glm-4.5v", category: "haiku", description: "Generic Claude 3 haiku → latest haiku" },
+  { claudeModel: "claude-3-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Generic Claude 3 sonnet → latest 3.x sonnet" },
+  { claudeModel: "claude-3-opus", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "Generic Claude 3 opus → Claude 3 Opus" },
+  { claudeModel: "claude-4-opus", zaiModel: "GLM-4-6-API-V1", category: "opus", description: "Generic Claude 4 opus → latest opus" },
+  { claudeModel: "claude-4-sonnet", zaiModel: "GLM-4-6-API-V1", category: "sonnet", description: "Generic Claude 4 sonnet → latest sonnet" },
+  
+  // === GLM COMPATIBILITY MAPPINGS (Direct Access) ===
+  // Exact GLM model names for direct access via Claude API
+  { claudeModel: "glm-4.5", zaiModel: "0727-360B-API", category: "glm", description: "Direct GLM-4.5 access" },
+  { claudeModel: "glm-4.6", zaiModel: "GLM-4-6-API-V1", category: "glm", description: "Direct GLM-4.6 access" },
+  { claudeModel: "glm-4.5v", zaiModel: "glm-4.5v", category: "glm", description: "Direct GLM-4.5V multimodal access" },
+  
+  // Alternative naming for GLM models
+  { claudeModel: "glm4.5", zaiModel: "0727-360B-API", category: "glm", description: "GLM-4.5 alt naming" },
+  { claudeModel: "glm4.6", zaiModel: "GLM-4-6-API-V1", category: "glm", description: "GLM-4.6 alt naming" },
+  { claudeModel: "glm4.5v", zaiModel: "glm-4.5v", category: "glm", description: "GLM-4.5V alt naming" },
+  
+  // Underscore variants
+  { claudeModel: "glm_4.5", zaiModel: "0727-360B-API", category: "glm", description: "GLM-4.5 underscore variant" },
+  { claudeModel: "glm_4.6", zaiModel: "GLM-4-6-API-V1", category: "glm", description: "GLM-4.6 underscore variant" },
+  { claudeModel: "glm_4.5v", zaiModel: "glm-4.5v", category: "glm", description: "GLM-4.5V underscore variant" },
 ];
 
 /**

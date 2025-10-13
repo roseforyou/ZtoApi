@@ -1,53 +1,115 @@
-# 🚀 ZtoApi - Your Friendly OpenAI-compatible API Proxy Server! 🌟
+# 🚀 ZtoApi - OpenAI & Anthropic Claude Compatible API Proxy! 🌟
 
-> TODO: ✅ **COMPLETED** - Added Anthropic API for Claude models under /anthropic endpoint, using gpt-tokenizer for token counting
+> ✅ **FULLY IMPLEMENTED** - Complete OpenAI AND Anthropic Claude API support with dual endpoints!
 
 ![Deno](https://img.shields.io/badge/deno-v1.40+-blue.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-
 > 🎓 For personal, non-commercial or educational use only. Please use responsibly! 🌈
 
-Hey there! 👋 Welcome to ZtoApi - your super cool, high-performance OpenAI-compatible API proxy that brings Z.ai's amazing GLM-4.5, GLM-4.6, and GLM-4.5V models to life through a familiar OpenAI-style interface! ✨ Built with Deno's awesome native HTTP API, it supports both streaming and non-streaming responses, plus comes with a real-time monitoring dashboard that's just *chef's kiss*! 😍
+Hey there! 👋 Welcome to ZtoApi - your ultimate dual-API proxy that brings Z.ai's amazing GLM models to life through BOTH OpenAI AND Anthropic Claude compatible interfaces! ✨ Built with Deno's awesome native HTTP API, it supports streaming/non-streaming responses for both APIs, plus comes with a real-time monitoring dashboard! 😍
 
-**NEW! 🎉 Anthropic Claude API Support** - Now includes full Claude API compatibility under `/anthropic/v1/` endpoints, mapping Claude models to our powerful GLM models!
+## 🎯 **DUAL API SUPPORT** - Use Either Format!
+
+### 🔥 **OpenAI Compatible** → `/v1/` endpoints
+### 🎭 **Anthropic Claude Compatible** → `/anthropic/v1/` endpoints
+
+**Use your existing OpenAI OR Claude clients without any changes!** 🚀
 
 ## 🌟 Key Features
 
-- 🔄 **OpenAI API compatible** — use your existing OpenAI clients without any changes! Easy peasy! 🎯
-- 🤖 **NEW! Anthropic Claude API compatible** — use Claude clients and tools seamlessly! 🎭
-- 🌊 **SSE streaming support** for real-time token delivery - watch the magic happen! ✨
-- 🧠 **Advanced thinking content processing** with 5 amazing modes:
-  - `"strip"` - Remove thinking tags, show only clean content 🧹
-  - `"thinking"` - Convert `<details>` to `<thinking>` tags 💭
-  - `"think"` - Convert `<details>` to `<think>` tags (a simpler version of `thinking`)
-  - `"raw"` - Keep original `<details>` tags as-is 📄
-  - `"separate"` - Extract thinking into separate `reasoning_content` field 📊
-- 📊 **Built-in web Dashboard** with live request stats - monitor your API in style! 🎨
-- 🔐 **API key authentication** and optional anonymous token fallback - security first! 🛡️
+- 🔄 **OpenAI API fully compatible** — use your existing OpenAI clients seamlessly! 🎯
+- 🎭 **Anthropic Claude API fully compatible** — use Claude Desktop, cline, cursor, and any Claude tools! 🤖
+- 🌊 **SSE streaming support** for both APIs - real-time token delivery! ✨
+- 🧠 **Advanced thinking content processing** with 5 amazing modes
+- 📊 **Built-in web Dashboard** with live request stats for both APIs! 🎨
+- 🔐 **API key authentication** with optional anonymous token fallback 🛡️
 - ⚙️ **Configurable via environment variables** - make it yours! 🎛️
-- 🚀 **Deployable on Deno Deploy or self-hosted** - your choice, your way! 🏠
+- 🚀 **Deployable on Deno Deploy or self-hosted** - your choice! 🏠
 
-## 🤖 Supported Models
+## 🤖 Supported Models & API Endpoints
 
-### OpenAI-Compatible Models
-- 0727-360B-API — GLM-4.5 (text, code, tools) 📝
-- GLM-4-6-API-V1 — GLM-4.6 (text, code, tools) 🧠✨ **NEW! Smartest model!**
-- glm-4.5v — GLM-4.5V (full multimodal: image, video, document, audio) 🎥🖼️🎵
+### 🔥 **OpenAI-Compatible API** → `/v1/` endpoints
+**Base URL**: `http://localhost:9090/v1`
 
-### Claude-Compatible Models (NEW! 🎉)
+| Model ID | GLM Model | Capabilities | Description |
+|----------|-----------|--------------|-------------|
+| `0727-360B-API` | GLM-4.5 | Text, Code, Tools | Balanced performance model 📝 |
+| `GLM-4-6-API-V1` | GLM-4.6 | Text, Code, Tools | **🧠✨ Smartest model!** |
+| `glm-4.5v` | GLM-4.5V | Multimodal (Image, Video, Audio, Docs) | 🎥🖼️🎵 Full multimodal |
 
-ZtoApi now supports the full Claude API! Here's how Claude models map to our powerful GLM models:
+### 🎭 **Anthropic Claude-Compatible API** → `/anthropic/v1/` endpoints  
+**Base URL**: `http://localhost:9090/anthropic/v1`
 
-| Claude Model | Z.ai GLM Model | Category | Capabilities | Description |
-|-------------|----------------|----------|-------------|-------------|
-| `claude-3-haiku-20240307` | `glm-4.5v` | Haiku | Vision, Multimodal | Fast multimodal model |
-| `claude-3-5-haiku-20241022` | `glm-4.5v` | Haiku | Vision, Multimodal | Latest fast multimodal model |
-| `claude-3-sonnet-20240229` | `0727-360B-API` | Sonnet | Text, Tools | Balanced text model |
-| `claude-3-5-sonnet-20240620` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Latest balanced model |
-| `claude-3-5-sonnet-20241022` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Most recent sonnet model |
-| `claude-3-opus-20240229` | `GLM-4-6-API-V1` | Opus | Text, Tools | Most capable model |
+**ALL real Claude models + direct GLM access supported!**
+
+#### 🚀 **Latest Claude 4.x Models** (2025 - Most Advanced!)
+| Claude Model | → GLM Model | Date | Description |
+|-------------|-------------|------|-------------|
+| `claude-sonnet-4-5-20250929` | `GLM-4-6-API-V1` | Sep 2025 | **🚀 LATEST! Sonnet 4.5** |
+| `claude-opus-4-1-20250805` | `GLM-4-6-API-V1` | Aug 2025 | **🏆 LATEST! Opus 4.1 - Ultimate** |
+| `claude-opus-4-20250514` | `GLM-4-6-API-V1` | May 2025 | **🏆 Opus 4.0** |
+| `claude-sonnet-4-20250514` | `GLM-4-6-API-V1` | May 2025 | **🎯 Sonnet 4.0** |
+
+#### ⚡ **Claude 3.x Models** (Current & Previous Gen)
+| Claude Model | → GLM Model | Date | Description |
+|-------------|-------------|------|-------------|
+| `claude-3-7-sonnet-20250219` | `GLM-4-6-API-V1` | Feb 2025 | **⚡ NEW! Claude 3.7 Sonnet** |
+| `claude-3-5-haiku-20241022` | `glm-4.5v` | Oct 2024 | **🚀 Latest Haiku - Multimodal** |
+| `claude-3-5-sonnet-20241022` | `GLM-4-6-API-V1` | Oct 2024 | Claude 3.5 Sonnet (Oct) |
+| `claude-3-5-sonnet-20240620` | `GLM-4-6-API-V1` | Jun 2024 | Claude 3.5 Sonnet (June) |
+| `claude-3-haiku-20240307` | `glm-4.5v` | Mar 2024 | Claude 3 Haiku - Fast |
+| `claude-3-sonnet-20240229` | `0727-360B-API` | Feb 2024 | Claude 3 Sonnet - Balanced |
+| `claude-3-opus-20240229` | `GLM-4-6-API-V1` | Feb 2024 | Claude 3 Opus - Powerful |
+
+#### 🔗 **Generic Model Names** (Auto-Latest)
+| Claude Model | → GLM Model | Description |
+|-------------|-------------|-------------|
+| `claude-4.5-sonnet` | `GLM-4-6-API-V1` | Latest Sonnet 4.5 |
+| `claude-4.1-opus` | `GLM-4-6-API-V1` | Latest Opus 4.1 |
+| `claude-4-opus` | `GLM-4-6-API-V1` | Latest Opus 4.x |
+| `claude-4-sonnet` | `GLM-4-6-API-V1` | Latest Sonnet 4.x |
+| `claude-3.7-sonnet` | `GLM-4-6-API-V1` | Claude 3.7 generic |
+| `claude-3-haiku` | `glm-4.5v` | Latest haiku (multimodal) |
+| `claude-3-sonnet` | `GLM-4-6-API-V1` | Latest 3.x sonnet |
+| `claude-3-opus` | `GLM-4-6-API-V1` | Claude 3 opus |
+
+#### 🎯 **Direct GLM Model Access** (Via Claude API!)
+**Use GLM models directly through the Anthropic API format:**
+
+| GLM Model Name | → GLM Model | Description |
+|---------------|-------------|-------------|
+| `glm-4.6` | `GLM-4-6-API-V1` | **🧠 Smartest GLM model direct access** |
+| `glm-4.5` | `0727-360B-API` | **📝 Balanced GLM model direct access** |
+| `glm-4.5v` | `glm-4.5v` | **🎥 Multimodal GLM model direct access** |
+| `glm4.6` / `glm_4.6` | `GLM-4-6-API-V1` | Alternative naming variants |
+| `glm4.5` / `glm_4.5` | `0727-360B-API` | Alternative naming variants |
+| `glm4.5v` / `glm_4.5v` | `glm-4.5v` | Alternative naming variants |
+
+**🎉 30+ supported model names! All REAL Claude models + direct GLM access!**
+
+## 🔌 **API Endpoints Overview**
+
+### **OpenAI Compatible Endpoints** 🔥
+```
+GET  /v1/models                    # List available models
+POST /v1/chat/completions          # Chat completions (streaming & non-streaming)
+```
+
+### **Anthropic Claude Compatible Endpoints** 🎭
+```
+GET  /anthropic/v1/models          # List available Claude models
+POST /anthropic/v1/messages        # Messages (streaming & non-streaming)  
+POST /anthropic/v1/messages/count_tokens  # Count tokens in messages
+```
+
+### **Dashboard & Monitoring** 📊
+```
+GET  /                             # Welcome page & overview
+GET  /dashboard                    # Real-time API monitoring dashboard
+GET  /docs                         # API documentation
+```
 | `claude-3-haiku` | `glm-4.5v` | Haiku | Vision, Multimodal | Generic haiku model |
 | `claude-3-sonnet` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Generic sonnet model |
 | `claude-3-opus` | `GLM-4-6-API-V1` | Opus | Text, Tools | Generic opus model |
@@ -466,35 +528,207 @@ const THINK_TAGS_MODE = "separate"; // options: "strip", "thinking", "think", "r
 
 The `"separate"` mode is particularly useful for applications that want to display reasoning and final answers separately, such as educational tools or debugging interfaces! 🎓
 
-## 💻 Examples
+## 💻 **Usage Examples - Both APIs**
 
-**Python (non-streaming)**
+### 🔥 **OpenAI API Examples**
+
+#### **Python (OpenAI SDK)**
 ```python
-from openai import OpenAI
-client = OpenAI(api_key="your-api-key", base_url="http://localhost:9090/v1")
-resp = client.chat.completions.create(model="GLM-4-6-API-V1", messages=[{"role":"user","content":"Hello"}])
-print(resp.choices[0].message.content)
+import openai
+
+# Use any OpenAI client - works out of the box!
+client = openai.OpenAI(
+    api_key="your-api-key",
+    base_url="http://localhost:9090/v1"  # Point to ZtoApi
+)
+
+# Chat with GLM-4.6 (smartest model)
+response = client.chat.completions.create(
+    model="GLM-4-6-API-V1",
+    messages=[{"role": "user", "content": "Hello! How are you?"}]
+)
+print(response.choices[0].message.content)
+
+# Multimodal with GLM-4.5V
+response = client.chat.completions.create(
+    model="glm-4.5v",
+    messages=[{
+        "role": "user", 
+        "content": [
+            {"type": "text", "text": "What's in this image?"},
+            {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
+        ]
+    }]
+)
 ```
 
-**cURL (streaming)**
+#### **cURL (OpenAI)**
 ```bash
+# Non-streaming
 curl -X POST http://localhost:9090/v1/chat/completions \
--H "Content-Type: application/json" \
--H "Authorization: Bearer your-api-key" \
--d '{"model":"GLM-4-6-API-V1","messages":[{"role":"user","content":"Write a short poem about spring"}],"stream":true}'
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "GLM-4-6-API-V1",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "stream": false
+  }'
+
+# Streaming
+curl -X POST http://localhost:9090/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "GLM-4-6-API-V1", 
+    "messages": [{"role": "user", "content": "Tell me a story"}],
+    "stream": true
+  }'
 ```
 
-**JavaScript (fetch)**
-```javascript
-async function chat(message, stream=false) {
-const response = await fetch('http://localhost:9090/v1/chat/completions', {
-method: 'POST',
-headers: {'Content-Type':'application/json','Authorization':'Bearer your-api-key'},
-body: JSON.stringify({model:'GLM-4-6-API-V1', messages:[{role:'user', content:message}], stream})
-});
-if (stream) { /* handle SSE stream */ } else { const data = await response.json(); console.log(data.choices[0].message.content); }
-}
+### 🎭 **Anthropic Claude API Examples**
+
+#### **Python (Anthropic SDK)**
+```python
+import anthropic
+
+# Use official Anthropic client - works seamlessly!
+client = anthropic.Anthropic(
+    api_key="your-api-key",
+    base_url="http://localhost:9090/anthropic/v1"  # Point to ZtoApi
+)
+
+# Latest Claude 4.5 Sonnet (REAL model - maps to GLM-4.6)
+response = client.messages.create(
+    model="claude-sonnet-4-5-20250929",  # 🚀 REAL LATEST MODEL!
+    max_tokens=1000,
+    messages=[{"role": "user", "content": "Hello Claude 4.5!"}]
+)
+print(response.content[0].text)
+
+# Latest Claude 4.1 Opus (REAL model - ultimate capability!)
+response = client.messages.create(
+    model="claude-opus-4-1-20250805",  # 🏆 REAL OPUS 4.1!
+    max_tokens=1000,
+    messages=[{"role": "user", "content": "Most capable Claude model!"}]
+)
+
+# New Claude 3.7 Sonnet (REAL model from Feb 2025)
+response = client.messages.create(
+    model="claude-3-7-sonnet-20250219",  # ⚡ NEW 3.7!
+    max_tokens=1000,
+    messages=[{"role": "user", "content": "Hello Claude 3.7!"}]
+)
+
+# Direct GLM access via Claude API!
+response = client.messages.create(
+    model="glm-4.6",  # 🎯 Direct GLM model access!
+    max_tokens=1000,
+    messages=[{"role": "user", "content": "You're GLM-4.6 via Claude API!"}]
+)
+
+# Multimodal with haiku models (map to GLM-4.5V)
+response = client.messages.create(
+    model="claude-3-5-haiku-20241022",
+    max_tokens=1000,
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Describe this image"},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "..."}}
+        ]
+    }]
+)
 ```
+
+#### **cURL (Anthropic)**
+```bash
+# Latest Claude 4.5 Sonnet (REAL model!)
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "claude-sonnet-4-5-20250929",
+    "max_tokens": 1000,
+    "messages": [{"role": "user", "content": "Hello from REAL Claude 4.5!"}]
+  }'
+
+# Latest Claude 4.1 Opus (REAL ultimate model!)
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "claude-opus-4-1-20250805", 
+    "max_tokens": 1000,
+    "messages": [{"role": "user", "content": "Most capable REAL Claude!"}]
+  }'
+
+# Direct GLM access via Anthropic API
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "glm-4.6",
+    "max_tokens": 1000,
+    "messages": [{"role": "user", "content": "GLM via Claude API!"}]
+  }'
+
+# Token counting with REAL Claude models
+curl -X POST http://localhost:9090/anthropic/v1/messages/count_tokens \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "claude-sonnet-4-5-20250929",
+    "messages": [{"role": "user", "content": "Count my tokens!"}]
+  }'
+
+# Streaming with latest Claude 3.7
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your-api-key" \
+  -d '{
+    "model": "claude-3-7-sonnet-20250219",
+    "max_tokens": 1000,
+    "stream": true,
+    "messages": [{"role": "user", "content": "Stream me a story!"}]
+  }'
+```
+
+#### **JavaScript (Both APIs)**
+```javascript
+// OpenAI API
+const openaiResponse = await fetch('http://localhost:9090/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-api-key'
+  },
+  body: JSON.stringify({
+    model: 'GLM-4-6-API-V1',
+    messages: [{role: 'user', content: 'Hello OpenAI API!'}]
+  })
+});
+
+// Anthropic API - Latest REAL Claude 4.5!
+const claudeResponse = await fetch('http://localhost:9090/anthropic/v1/messages', {
+  method: 'POST', 
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'your-api-key'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4-5-20250929',  // 🚀 REAL Latest model!
+    max_tokens: 1000,
+    messages: [{role: 'user', content: 'Hello REAL Claude 4.5!'}]
+  })
+});
+```
+
+### 🎯 **Which API Should You Use?**
+
+- **🔥 OpenAI API**: If you have existing OpenAI integrations, ChatGPT clients, or OpenAI-based tools
+- **🎭 Anthropic API**: If you use Claude Desktop, cline, cursor, or prefer Anthropic's format
+- **🚀 Both work identically** - same GLM models, same performance, same features!
+- **💡 Pro tip**: Try both! Some tools work better with different API formats
 
 ## 🛠️ Troubleshooting
 
