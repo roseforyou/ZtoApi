@@ -688,16 +688,24 @@ async function getAnonymousToken(): Promise<string> {
  * @param timestamp 时间戳 (毫秒)
  * @returns { signature: string, timestamp: number }
  */
-async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
-  const r = String(timestamp);
-  const i = `${e}|${t}|${r}`;
-  const n = Math.floor(timestamp / (5 * 60 * 1000));
-  const key = new TextEncoder().encode("junjie");
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: string }> {
+  const timestampStr = String(timestamp);
 
-  // 第一层 HMAC
+  // 1. 对消息内容进行Base64编码
+  const bodyEncoded = new TextEncoder().encode(t);
+  const bodyBase64 = btoa(String.fromCharCode(...bodyEncoded));
+
+  // 2. 构造待签名字符串
+  const stringToSign = `${e}|${bodyBase64}|${timestampStr}`;
+
+  // 3. 计算5分钟时间窗口
+  const timeWindow = Math.floor(timestamp / (5 * 60 * 1000));
+
+  // 4. 第一层 HMAC，生成中间密钥
+  const firstKeyMaterial = new TextEncoder().encode("junjie");
   const firstHmacKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    firstKeyMaterial,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -705,29 +713,34 @@ async function generateSignature(e: string, t: string, timestamp: number): Promi
   const firstSignatureBuffer = await crypto.subtle.sign(
     "HMAC",
     firstHmacKey,
-    new TextEncoder().encode(String(n))
+    new TextEncoder().encode(String(timeWindow))
   );
-  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const intermediateKey = Array.from(new Uint8Array(firstSignatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  // 第二层 HMAC
+  // 5. 第二层 HMAC，生成最终签名
+  const secondKeyMaterial = new TextEncoder().encode(intermediateKey);
   const secondHmacKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(o),
+    secondKeyMaterial,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const secondSignatureBuffer = await crypto.subtle.sign(
+  const finalSignatureBuffer = await crypto.subtle.sign(
     "HMAC",
     secondHmacKey,
-    new TextEncoder().encode(i)
+    new TextEncoder().encode(stringToSign)
   );
-  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const signature = Array.from(new Uint8Array(finalSignatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  debugLog("签名生成成功: %s", signature);
+  debugLog("新版签名生成成功: %s", signature);
   return {
       signature,
-      timestamp
+      timestamp: timestampStr
   };
 }
 
