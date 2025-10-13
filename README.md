@@ -24,6 +24,7 @@ ZtoApi 支持 Z.ai 的多个先进 AI 模型：
 | 模型ID | 模型名称 | 特性 |
 |---------|----------|------|
 | 0727-360B-API | GLM-4.5 | 通用对话、代码生成、工具调用 |
+| glm-4.6 | GLM-4.6 | 🚀 最新增强模型，具备更强的推理和代码能力 |
 | glm-4.5v | GLM-4.5V | 🎯 全方位多模态理解：图像、视频、文档、音频 |
 
 ### 模型特性对比
@@ -32,6 +33,12 @@ ZtoApi 支持 Z.ai 的多个先进 AI 模型：
 - ✅ 思考过程展示
 - ✅ MCP 工具调用
 - ✅ 代码生成与分析
+- ❌ 多模态理解
+
+**GLM-4.6** (`glm-4.6`)
+- ✅ 🚀 更强的思考过程展示
+- ✅ 🚀 增强的MCP工具调用
+- ✅ 🚀 顶级的代码生成与分析
 - ❌ 多模态理解
 
 **GLM-4.5V** (`glm-4.5v`) - 全方位多模态理解
@@ -209,30 +216,28 @@ deno compile --allow-net --allow-env --output ztoapi main.ts
 ztoapi.exe        # Windows
 ```
 
-#### 🐳 Docker容器化部署
+#### 🐳 Docker 部署 (推荐)
 
-1. **创建Dockerfile**
-   ```dockerfile
-   FROM denoland/deno:1.40.0
-   
-   WORKDIR /app
-   COPY main.ts .
-   
-   EXPOSE 9090
-   
-   CMD ["deno", "run", "--allow-net", "--allow-env", "main.ts"]
-   ```
+使用 Docker Compose 可以一键启动服务，是本地开发和生产部署的推荐方式。
 
-2. **构建和运行**
+1. **准备文件**
+   - 项目已包含 `Dockerfile` 和 `docker-compose.yml` 文件，无需手动创建。
+
+2. **配置环境变量**
+   - 打开 `docker-compose.yml` 文件。
+   - 修改 `environment` 部分的 `DEFAULT_KEY` 为你自己的安全密钥。
+   - 根据需要，可以取消注释并设置 `ZAI_TOKEN` 等其他变量。
+
+3. **构建和运行**
    ```bash
-   # 构建镜像
-   docker build -t ztoapi .
-   
-   # 运行容器
-   docker run -p 9090:9090 \
-     -e DEFAULT_KEY="sk-your-production-key" \
-     -e DEBUG_MODE="false" \
-     ztoapi
+   # 在 ZtoApi 目录下，一键构建并启动服务
+   docker-compose up -d
+
+   # 查看服务日志
+   docker-compose logs -f
+
+   # 关闭并移除容器
+   docker-compose down
    ```
 
 #### 🔄 服务管理
@@ -327,6 +332,13 @@ response = client.chat.completions.create(
 )
 print(response.choices[0].message.content)
 
+# 使用 GLM-4.6 进行增强对话
+response = client.chat.completions.create(
+    model="glm-4.6",
+    messages=[{"role": "user", "content": "用Python写一个快速排序算法"}]
+)
+print(response.choices[0].message.content)
+
 # 使用 GLM-4.5V 进行全方位多模态理解
 
 # 1. 图像分析
@@ -415,6 +427,16 @@ curl -X POST https://your-project.deno.dev/v1/chat/completions \
   -d '{
     "model": "0727-360B-API",
     "messages": [{"role": "user", "content": "你好"}],
+    "stream": false
+  }'
+
+# 使用 GLM-4.6 进行增强对话
+curl -X POST https://your-project.deno.dev/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-api-key" \
+  -d '{
+    "model": "glm-4.6",
+    "messages": [{"role": "user", "content": "用Python写一个快速排序算法"}],
     "stream": false
   }'
 
