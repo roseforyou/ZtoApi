@@ -21,6 +21,20 @@
  */
 
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import {
+  type AnthropicMessagesRequest,
+  type AnthropicMessagesResponse,
+  type AnthropicTokenCountRequest,
+  type AnthropicTokenCountResponse,
+  type AnthropicError,
+  convertAnthropicToOpenAI,
+  convertOpenAIToAnthropic,
+  countTokens,
+  processAnthropicStream,
+  getClaudeModels,
+  createErrorResponse,
+  CLAUDE_MODEL_MAPPINGS
+} from "./anthropic.ts";
 
 declare global {
   interface ImportMeta {
@@ -693,22 +707,31 @@ async function getAnonymousToken(): Promise<string> {
 }
 
 /**
- * 生成Z.ai API请求签名
+ * Generate Z.ai API request signature (Updated signature algorithm)
+ * Credits: @sarices (ZhengWeiDong) for the Base64 encoding fix
  * @param e "requestId,request_id,timestamp,timestamp,user_id,user_id"
- * @param t 用户最新消息
- * @param timestamp 时间戳 (毫秒)
- * @returns { signature: string, timestamp: number }
+ * @param t User's latest message
+ * @param timestamp Timestamp (milliseconds)
+ * @returns { signature: string, timestamp: string }
  */
-async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: number }> {
-  const r = String(timestamp);
-  const i = `${e}|${t}|${r}`;
-  const n = Math.floor(timestamp / (5 * 60 * 1000));
-  const key = new TextEncoder().encode("junjie");
+async function generateSignature(e: string, t: string, timestamp: number): Promise<{ signature: string, timestamp: string }> {
+  const timestampStr = String(timestamp);
 
-  // 第一层 HMAC
+  // 1. 对消息内容进行Base64编码 (Fix by @sarices)
+  const bodyEncoded = new TextEncoder().encode(t);
+  const bodyBase64 = btoa(String.fromCharCode(...bodyEncoded));
+
+  // 2. 构造待签名字符串
+  const stringToSign = `${e}|${bodyBase64}|${timestampStr}`;
+
+  // 3. 计算5分钟时间窗口
+  const timeWindow = Math.floor(timestamp / (5 * 60 * 1000));
+
+  // 4. 第一层 HMAC，生成中间密钥
+  const firstKeyMaterial = new TextEncoder().encode("junjie");
   const firstHmacKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    firstKeyMaterial,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -716,29 +739,34 @@ async function generateSignature(e: string, t: string, timestamp: number): Promi
   const firstSignatureBuffer = await crypto.subtle.sign(
     "HMAC",
     firstHmacKey,
-    new TextEncoder().encode(String(n))
+    new TextEncoder().encode(String(timeWindow))
   );
-  const o = Array.from(new Uint8Array(firstSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const intermediateKey = Array.from(new Uint8Array(firstSignatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  // 第二层 HMAC
+  // 5. 第二层 HMAC，生成最终签名
+  const secondKeyMaterial = new TextEncoder().encode(intermediateKey);
   const secondHmacKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(o),
+    secondKeyMaterial,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const secondSignatureBuffer = await crypto.subtle.sign(
+  const finalSignatureBuffer = await crypto.subtle.sign(
     "HMAC",
     secondHmacKey,
-    new TextEncoder().encode(i)
+    new TextEncoder().encode(stringToSign)
   );
-  const signature = Array.from(new Uint8Array(secondSignatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const signature = Array.from(new Uint8Array(finalSignatureBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  debugLog("签名生成成功: %s", signature);
+  debugLog("New signature generated successfully: %s", signature);
   return {
       signature,
-      timestamp
+      timestamp: timestampStr
   };
 }
 
@@ -748,22 +776,22 @@ async function callUpstreamWithHeaders(
   authToken: string
 ): Promise<Response> {
   try {
-    debugLog("调用上游API: %s", UPSTREAM_URL);
+    debugLog("Calling upstream API: %s", UPSTREAM_URL);
 
-    // 1. 解码JWT获取user_id
+    // 1. Decode JWT to get user_id
     let userId = "unknown";
     try {
       const tokenParts = authToken.split('.');
       if (tokenParts.length === 3) {
         const payload = JSON.parse(new TextDecoder().decode(decodeBase64(tokenParts[1])));
         userId = payload.id || userId;
-        debugLog("从JWT解析到 user_id: %s", userId);
+        debugLog("Parsed user_id from JWT: %s", userId);
       }
     } catch (e) {
-      debugLog("解析JWT失败: %v", e);
+      debugLog("Failed to parse JWT: %v", e);
     }
 
-    // 2. 准备签名所需参数
+    // 2. Prepare signature parameters
     const timestamp = Date.now();
     const requestId = crypto.randomUUID();
     const userMessage = upstreamReq.messages.filter(m => m.role === 'user').pop()?.content;
@@ -771,19 +799,19 @@ async function callUpstreamWithHeaders(
       (Array.isArray(userMessage) ? userMessage.find(c => c.type === 'text')?.text || "" : "");
 
     if (!lastMessageContent) {
-      throw new Error("无法获取用于签名的用户消息内容");
+      throw new Error("Cannot get user message content for signature");
     }
 
     const e = `requestId,${requestId},timestamp,${timestamp},user_id,${userId}`;
 
-    // 3. 生成新签名
+    // 3. Generate new signature
     const { signature } = await generateSignature(e, lastMessageContent, timestamp);
-    debugLog("生成新版签名: %s", signature);
+    debugLog("Generated new signature: %s", signature);
 
     const reqBody = JSON.stringify(upstreamReq);
-    debugLog("上游请求体: %s", reqBody);
+    debugLog("Upstream request body: %s", reqBody);
 
-    // 4. 构建带新参数的URL和Headers
+    // 4. Build URL with new parameters and headers
     const params = new URLSearchParams({
         timestamp: timestamp.toString(),
         requestId: requestId,
@@ -810,10 +838,10 @@ async function callUpstreamWithHeaders(
       body: reqBody
     });
 
-    debugLog("上游响应状态: %d %s", response.status, response.statusText);
+    debugLog("Upstream response status: %d %s", response.status, response.statusText);
     return response;
   } catch (error) {
-    debugLog("调用上游失败: %v", error);
+    debugLog("Upstream call failed: %v", error);
     throw error;
   }
 }
@@ -1292,8 +1320,8 @@ async function collectFullResponse(
 
                     // Also add the content part from edit_content to fullContent
                     if (transformed.content && transformed.content.trim() !== "") {
-                      fullContent += transformed.content;
-                      debugLog("Added content part from edit_content, length: %d", transformed.content.length);
+                      fullContent += transformed.content || "";
+                      debugLog("Added content part from edit_content, length: %d", (transformed.content || "").length);
                     }
                   }
                 }
@@ -1303,14 +1331,14 @@ async function collectFullResponse(
                 const processedContent = typeof transformed === "string" ? transformed : transformed.content;
 
                 if (processedContent && processedContent.trim() !== "") {
-                  fullContent += processedContent;
-                  debugLog("Added processed edit_content to fullContent, length: %d", processedContent.length);
+                  fullContent += processedContent || "";
+                  debugLog("Added processed edit_content to fullContent, length: %d", (processedContent || "").length);
                 }
               }
             }
 
-            if (upstreamData.data.delta_content !== "") {
-              const rawContent = upstreamData.data.delta_content;
+            if (upstreamData.data.delta_content && upstreamData.data.delta_content !== "") {
+              const rawContent = upstreamData.data.delta_content || "";
               const isThinking = upstreamData.data.phase === "thinking";
 
               if (thinkTagsMode === "separate") {
@@ -1376,6 +1404,486 @@ async function collectFullResponse(
     reasoning_content: fullReasoning || undefined,
     usage: finalUsage
   };
+}
+
+/**
+ * Anthropic API handlers
+ */
+
+function handleAnthropicModels(request: Request): Response {
+  const headers = new Headers();
+  setCORSHeaders(headers);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers });
+  }
+
+  const models = getClaudeModels();
+  
+  headers.set("Content-Type", "application/json");
+  return new Response(JSON.stringify({ data: models }), {
+    status: 200,
+    headers
+  });
+}
+
+async function handleAnthropicMessages(request: Request): Promise<Response> {
+  const startTime = Date.now();
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const userAgent = request.headers.get("User-Agent") || "";
+
+  debugLog("Received Anthropic messages request");
+  debugLog("🌐 User-Agent: %s", userAgent);
+
+  const headers = new Headers();
+  setCORSHeaders(headers);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers });
+  }
+
+  // API key validation
+  const authHeader = request.headers.get("Authorization") || request.headers.get("x-api-key");
+  if (!authHeader || (!authHeader.startsWith("Bearer ") && !authHeader.startsWith("sk-"))) {
+    debugLog("Missing or invalid Authorization header for Anthropic API");
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 401);
+    addLiveRequest(request.method, path, 401, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "authentication_error",
+        message: "Missing or invalid API key"
+      }
+    }), {
+      status: 401,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+
+  const apiKey = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+  if (!validateApiKey(`Bearer ${apiKey}`)) {
+    debugLog("Invalid API key for Anthropic request");
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 401);
+    addLiveRequest(request.method, path, 401, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "authentication_error",
+        message: "Invalid API key"
+      }
+    }), {
+      status: 401,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+
+  debugLog("Anthropic API key validated");
+
+  // Read request body
+  let body: string;
+  try {
+    body = await request.text();
+    debugLog("📥 Received Anthropic body length: %d chars", body.length);
+  } catch (error) {
+    debugLog("Failed to read Anthropic request body: %v", error);
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 400);
+    addLiveRequest(request.method, path, 400, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "invalid_request_error",
+        message: "Failed to read request body"
+      }
+    }), {
+      status: 400,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+
+  // Parse JSON
+  let anthropicReq: AnthropicMessagesRequest;
+  try {
+    anthropicReq = JSON.parse(body) as AnthropicMessagesRequest;
+    debugLog("✅ Anthropic JSON parsed successfully");
+  } catch (error) {
+    debugLog("Anthropic JSON parse failed: %v", error);
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 400);
+    addLiveRequest(request.method, path, 400, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "invalid_request_error",
+        message: "Invalid JSON"
+      }
+    }), {
+      status: 400,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+
+  debugLog("🤖 Anthropic request parsed - model: %s, stream: %v, messages: %d", 
+    anthropicReq.model, anthropicReq.stream, anthropicReq.messages.length);
+
+  // Convert Anthropic request to OpenAI format
+  const openaiReq = convertAnthropicToOpenAI(anthropicReq);
+  debugLog("🔄 Converted to OpenAI format - model: %s", openaiReq.model);
+
+  // Get model configuration for the mapped Z.ai model
+  const modelConfig = getModelConfig(openaiReq.model);
+  debugLog("📋 Using model config: %s (%s)", modelConfig.name, modelConfig.upstreamId);
+
+  // Choose token for this conversation
+  let authToken = ZAI_TOKEN;
+  if (ANON_TOKEN_ENABLED) {
+    try {
+      const anonToken = await getAnonymousToken();
+      authToken = anonToken;
+      debugLog("Anonymous token obtained for Anthropic request: %s...", anonToken.substring(0, 10));
+    } catch (error) {
+      debugLog("Failed to obtain anonymous token for Anthropic; falling back to configured token: %v", error);
+    }
+  }
+
+  // Generate session IDs
+  const chatID = `anthropic-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const msgID = Date.now().toString();
+
+  // Build upstream request (similar to OpenAI chat completions)
+  const upstreamReq = {
+    stream: true, // always fetch upstream as stream
+    chat_id: chatID,
+    id: msgID,
+    model: modelConfig.upstreamId,
+    messages: openaiReq.messages,
+    params: {
+      ...modelConfig.defaultParams,
+      max_tokens: anthropicReq.max_tokens
+    },
+    features: {
+      enable_thinking: modelConfig.capabilities.thinking,
+      image_generation: false,
+      web_search: false,
+      auto_web_search: false,
+      preview_mode: modelConfig.capabilities.vision
+    },
+    background_tasks: {
+      title_generation: false,
+      tags_generation: false
+    },
+    mcp_servers: modelConfig.capabilities.mcp ? [] : undefined,
+    model_item: {
+      id: modelConfig.upstreamId,
+      name: modelConfig.name,
+      owned_by: "anthropic",
+      openai: {
+        id: modelConfig.upstreamId,
+        name: modelConfig.upstreamId,
+        owned_by: "anthropic"
+      }
+    },
+    tool_servers: [],
+    variables: {
+      "{{USER_NAME}}": `Guest-${Date.now()}`,
+      "{{CURRENT_DATETIME}}": new Date().toLocaleString('en-US')
+    }
+  };
+
+  // Call upstream
+  try {
+    if (anthropicReq.stream) {
+      return await handleAnthropicStreamResponse(upstreamReq, chatID, msgID, authToken, startTime, path, userAgent, anthropicReq, modelConfig);
+    } else {
+      return await handleAnthropicNonStreamResponse(upstreamReq, chatID, msgID, authToken, startTime, path, userAgent, anthropicReq, modelConfig);
+    }
+  } catch (error) {
+    debugLog("Anthropic upstream call failed: %v", error);
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 502);
+    addLiveRequest(request.method, path, 502, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "api_error",
+        message: "Failed to call upstream"
+      }
+    }), {
+      status: 502,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+}
+
+async function handleAnthropicStreamResponse(
+  upstreamReq: any,
+  chatID: string,
+  msgID: string,
+  authToken: string,
+  startTime: number,
+  path: string,
+  userAgent: string,
+  req: AnthropicMessagesRequest,
+  modelConfig: ModelConfig
+): Promise<Response> {
+  debugLog("Starting Anthropic stream response (chat_id=%s)", chatID);
+
+  try {
+    const response = await callUpstreamWithHeaders(upstreamReq, chatID, authToken);
+
+    if (!response.ok) {
+      debugLog("Upstream returned error status for Anthropic: %d", response.status);
+      const duration = Date.now() - startTime;
+      recordRequestStats(startTime, path, 502);
+      addLiveRequest("POST", path, 502, duration, userAgent);
+      return new Response(JSON.stringify({
+        type: "error",
+        error: {
+          type: "api_error",
+          message: "Upstream error"
+        }
+      }), { 
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (!response.body) {
+      debugLog("Upstream response body is empty for Anthropic");
+      const duration = Date.now() - startTime;
+      recordRequestStats(startTime, path, 502);
+      addLiveRequest("POST", path, 502, duration, userAgent);
+      return new Response(JSON.stringify({
+        type: "error",
+        error: {
+          type: "api_error",
+          message: "Upstream response body is empty"
+        }
+      }), { 
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+
+    // Process upstream SSE stream and convert to Anthropic format
+    (async () => {
+      try {
+        if (response.body) {
+          for await (const chunk of processAnthropicStream(response.body, req.model, msgID)) {
+            await writer.write(new TextEncoder().encode(chunk));
+          }
+        }
+      } catch (error: any) {
+        debugLog("Error in Anthropic stream processing: %v", error);
+      } finally {
+        await writer.close();
+      }
+    })().catch((error: any) => {
+      debugLog("Error while processing Anthropic upstream stream: %v", error);
+    });
+
+    // Record stats
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 200);
+    addLiveRequest("POST", path, 200, duration, userAgent, modelConfig.name);
+
+    return new Response(readable, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-api-key",
+        "Access-Control-Allow-Credentials": "true"
+      }
+    });
+  } catch (error) {
+    debugLog("Error handling Anthropic stream response: %v", error);
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 502);
+    addLiveRequest("POST", path, 502, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "api_error",
+        message: "Failed to process stream response"
+      }
+    }), { 
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+
+async function handleAnthropicNonStreamResponse(
+  upstreamReq: any,
+  chatID: string,
+  msgID: string,
+  authToken: string,
+  startTime: number,
+  path: string,
+  userAgent: string,
+  req: AnthropicMessagesRequest,
+  modelConfig: ModelConfig
+): Promise<Response> {
+  debugLog("Starting Anthropic non-stream response (chat_id=%s)", chatID);
+
+  try {
+    const response = await callUpstreamWithHeaders(upstreamReq, chatID, authToken);
+
+    if (!response.ok) {
+      debugLog("Upstream returned error status for Anthropic non-stream: %d", response.status);
+      const duration = Date.now() - startTime;
+      recordRequestStats(startTime, path, 502);
+      addLiveRequest("POST", path, 502, duration, userAgent);
+      return new Response(JSON.stringify({
+        type: "error",
+        error: {
+          type: "api_error",
+          message: "Upstream error"
+        }
+      }), { 
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (!response.body) {
+      debugLog("Upstream response body is empty for Anthropic non-stream");
+      const duration = Date.now() - startTime;
+      recordRequestStats(startTime, path, 502);
+      addLiveRequest("POST", path, 502, duration, userAgent);
+      return new Response(JSON.stringify({
+        type: "error",
+        error: {
+          type: "api_error",
+          message: "Upstream response body is empty"
+        }
+      }), { 
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // Collect the full response from the stream
+    const { content: finalContent, usage: finalUsage } = await collectFullResponse(response.body, "separate");
+    debugLog("Anthropic content collection completed, final length: %d", finalContent.length);
+
+    // Create a mock OpenAI response to convert
+    const openaiResponse = {
+      id: `msg_${chatID}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: modelConfig.upstreamId,
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: finalContent
+        },
+        finish_reason: "stop"
+      }],
+      usage: finalUsage || {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0
+      }
+    };
+
+    // Convert to Anthropic format
+    const anthropicResponse = convertOpenAIToAnthropic(openaiResponse, req.model, msgID);
+
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 200);
+    addLiveRequest("POST", path, 200, duration, userAgent, modelConfig.name);
+
+    return new Response(JSON.stringify(anthropicResponse), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-api-key",
+        "Access-Control-Allow-Credentials": "true"
+      }
+    });
+  } catch (error) {
+    debugLog("Error processing Anthropic non-stream response: %v", error);
+    const duration = Date.now() - startTime;
+    recordRequestStats(startTime, path, 502);
+    addLiveRequest("POST", path, 502, duration, userAgent);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "api_error",
+        message: "Failed to process non-stream response"
+      }
+    }), { 
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+
+async function handleAnthropicTokenCount(request: Request): Promise<Response> {
+  const headers = new Headers();
+  setCORSHeaders(headers);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers });
+  }
+
+  // API key validation (similar to messages endpoint)
+  const authHeader = request.headers.get("Authorization") || request.headers.get("x-api-key");
+  if (!authHeader || (!authHeader.startsWith("Bearer ") && !authHeader.startsWith("sk-"))) {
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "authentication_error",
+        message: "Missing or invalid API key"
+      }
+    }), {
+      status: 401,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
+
+  try {
+    const body = await request.text();
+    const tokenReq: AnthropicTokenCountRequest = JSON.parse(body);
+    
+    const inputTokens = countTokens(tokenReq);
+    
+    const response: AnthropicTokenCountResponse = {
+      input_tokens: inputTokens
+    };
+
+    headers.set("Content-Type", "application/json");
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers
+    });
+  } catch (error) {
+    debugLog("Token counting failed for Anthropic: %v", error);
+    return new Response(JSON.stringify({
+      type: "error",
+      error: {
+        type: "invalid_request_error",
+        message: "Failed to count tokens"
+      }
+    }), {
+      status: 400,
+      headers: { ...headers, "Content-Type": "application/json" }
+    });
+  }
 }
 
 /**
@@ -1875,7 +2383,7 @@ async function handleNonStreamResponse(
 
     const message: Message = {
       role: "assistant",
-      content: finalContent
+      content: finalContent || ""
     };
 
     // Add reasoning_content if available
@@ -1895,7 +2403,7 @@ async function handleNonStreamResponse(
           finish_reason: "stop"
         }
       ],
-      usage: finalUsage || undefined
+      usage: finalUsage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
     };
 
     const duration = Date.now() - startTime;
@@ -2093,6 +2601,20 @@ async function handleHttp(conn: Deno.Conn) {
         const response = await handleChatCompletions(request);
         await respondWith(response);
         // stats recorded inside handleChatCompletions
+      } else if (url.pathname === "/anthropic/v1/models") {
+        const response = handleAnthropicModels(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      } else if (url.pathname === "/anthropic/v1/messages") {
+        const response = await handleAnthropicMessages(request);
+        await respondWith(response);
+        // stats recorded inside handleAnthropicMessages
+      } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
+        const response = await handleAnthropicTokenCount(request);
+        await respondWith(response);
+        recordRequestStats(startTime, url.pathname, response.status);
+        addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       } else if (url.pathname === "/docs") {
         const response = await handleDocs(request);
         await respondWith(response);
@@ -2155,6 +2677,20 @@ async function handleRequest(request: Request): Promise<Response> {
     } else if (url.pathname === "/v1/chat/completions") {
       const response = await handleChatCompletions(request);
       // stats recorded inside handleChatCompletions
+      return response;
+    } else if (url.pathname === "/anthropic/v1/models") {
+      const response = handleAnthropicModels(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
+      return response;
+    } else if (url.pathname === "/anthropic/v1/messages") {
+      const response = await handleAnthropicMessages(request);
+      // stats recorded inside handleAnthropicMessages
+      return response;
+    } else if (url.pathname === "/anthropic/v1/messages/count_tokens") {
+      const response = await handleAnthropicTokenCount(request);
+      recordRequestStats(startTime, url.pathname, response.status);
+      addLiveRequest(request.method, url.pathname, response.status, Date.now() - startTime, userAgent);
       return response;
     } else if (url.pathname === "/docs") {
       const response = await handleDocs(request);

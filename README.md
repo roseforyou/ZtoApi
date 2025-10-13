@@ -1,6 +1,6 @@
 # 🚀 ZtoApi - Your Friendly OpenAI-compatible API Proxy Server! 🌟
 
-> TODO: Add anthropic api for claude code, and etc under /anthropic endpoint, using gpt-tokenizer for token counting
+> TODO: ✅ **COMPLETED** - Added Anthropic API for Claude models under /anthropic endpoint, using gpt-tokenizer for token counting
 
 ![Deno](https://img.shields.io/badge/deno-v1.40+-blue.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)
@@ -11,11 +11,14 @@
 
 Hey there! 👋 Welcome to ZtoApi - your super cool, high-performance OpenAI-compatible API proxy that brings Z.ai's amazing GLM-4.5, GLM-4.6, and GLM-4.5V models to life through a familiar OpenAI-style interface! ✨ Built with Deno's awesome native HTTP API, it supports both streaming and non-streaming responses, plus comes with a real-time monitoring dashboard that's just *chef's kiss*! 😍
 
+**NEW! 🎉 Anthropic Claude API Support** - Now includes full Claude API compatibility under `/anthropic/v1/` endpoints, mapping Claude models to our powerful GLM models!
+
 ## 🌟 Key Features
 
 - 🔄 **OpenAI API compatible** — use your existing OpenAI clients without any changes! Easy peasy! 🎯
+- 🤖 **NEW! Anthropic Claude API compatible** — use Claude clients and tools seamlessly! 🎭
 - 🌊 **SSE streaming support** for real-time token delivery - watch the magic happen! ✨
- - 🧠 **Advanced thinking content processing** with 5 amazing modes:
+- 🧠 **Advanced thinking content processing** with 5 amazing modes:
   - `"strip"` - Remove thinking tags, show only clean content 🧹
   - `"thinking"` - Convert `<details>` to `<thinking>` tags 💭
   - `"think"` - Convert `<details>` to `<think>` tags (a simpler version of `thinking`)
@@ -28,9 +31,32 @@ Hey there! 👋 Welcome to ZtoApi - your super cool, high-performance OpenAI-com
 
 ## 🤖 Supported Models
 
+### OpenAI-Compatible Models
 - 0727-360B-API — GLM-4.5 (text, code, tools) 📝
 - GLM-4-6-API-V1 — GLM-4.6 (text, code, tools) 🧠✨ **NEW! Smartest model!**
 - glm-4.5v — GLM-4.5V (full multimodal: image, video, document, audio) 🎥🖼️🎵
+
+### Claude-Compatible Models (NEW! 🎉)
+
+ZtoApi now supports the full Claude API! Here's how Claude models map to our powerful GLM models:
+
+| Claude Model | Z.ai GLM Model | Category | Capabilities | Description |
+|-------------|----------------|----------|-------------|-------------|
+| `claude-3-haiku-20240307` | `glm-4.5v` | Haiku | Vision, Multimodal | Fast multimodal model |
+| `claude-3-5-haiku-20241022` | `glm-4.5v` | Haiku | Vision, Multimodal | Latest fast multimodal model |
+| `claude-3-sonnet-20240229` | `0727-360B-API` | Sonnet | Text, Tools | Balanced text model |
+| `claude-3-5-sonnet-20240620` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Latest balanced model |
+| `claude-3-5-sonnet-20241022` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Most recent sonnet model |
+| `claude-3-opus-20240229` | `GLM-4-6-API-V1` | Opus | Text, Tools | Most capable model |
+| `claude-3-haiku` | `glm-4.5v` | Haiku | Vision, Multimodal | Generic haiku model |
+| `claude-3-sonnet` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | Generic sonnet model |
+| `claude-3-opus` | `GLM-4-6-API-V1` | Opus | Text, Tools | Generic opus model |
+| **Compatibility Mappings** | | | | |
+| `glm-4.5` | `0727-360B-API` | Sonnet | Text, Tools | GLM-4.5 compatibility |
+| `glm-4.6` | `GLM-4-6-API-V1` | Sonnet | Text, Tools | GLM-4.6 compatibility |
+| `glm-4.5v` | `glm-4.5v` | Haiku | Vision, Multimodal | GLM-4.5V compatibility |
+
+> 💡 **Smart Model Mapping**: Claude model names are automatically prefixed with "claude-" and support both exact matches and pattern-based fallbacks for maximum compatibility!
 
 ## 🎯 Model Capabilities
 
@@ -101,7 +127,7 @@ Dockerfile example:
 ```dockerfile
 FROM denoland/deno:1.40.0
 WORKDIR /app
-COPY main.ts .
+COPY main.ts anthropic.ts ./
 EXPOSE 9090
 CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "main.ts"]
 ```
@@ -116,6 +142,7 @@ docker run -p 9090:9090 -e DEFAULT_KEY="sk-your-key" ztoapi
 
 Let's test it out! 🧪
 
+**OpenAI API:**
 ```bash
 curl http://localhost:9090/v1/models
 ```
@@ -125,6 +152,18 @@ curl -X POST http://localhost:9090/v1/chat/completions \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer sk-your-local-key" \
 -d '{"model":"GLM-4-6-API-V1","messages":[{"role":"user","content":"Hello"}],"stream":false}'
+```
+
+**Claude API:**
+```bash
+curl http://localhost:9090/anthropic/v1/models
+```
+
+```bash
+curl -X POST http://localhost:9090/anthropic/v1/messages \
+-H "Content-Type: application/json" \
+-H "x-api-key: sk-your-local-key" \
+-d '{"model":"claude-3-5-sonnet-20241022","max_tokens":100,"messages":[{"role":"user","content":"Hello Claude!"}]}'
 ```
 
 ## ⚙️ Environment Variables
@@ -145,13 +184,19 @@ Here are all the amazing endpoints you can use! 🎯
 
 ### OpenAI-Compatible Endpoints
 - `GET /` — homepage 🏠
-- `GET /v1/models` — list available models 🤖
+- `GET /v1/models` — list available OpenAI models 🤖
 - `POST /v1/chat/completions` — main chat endpoint (OpenAI-compatible) 💬
 - `GET /docs` — API documentation page 📚
 - `GET /dashboard` — monitoring dashboard (if enabled) 📊
 
-Base path:
+### Claude-Compatible Endpoints (NEW! 🎉)
+- `GET /anthropic/v1/models` — list available Claude models 🤖
+- `POST /anthropic/v1/messages` — Claude messages endpoint 💬
+- `POST /anthropic/v1/messages/count_tokens` — token counting endpoint 🔢
+
+Base paths:
 - OpenAI: http://localhost:9090/v1 🌐
+- Claude: http://localhost:9090/anthropic/v1 🎭
 
 ## 🎛️ Feature Control Headers
 
@@ -493,3 +538,27 @@ This project is released under the MIT License. See LICENSE for details. 📄
 Hope you enjoy using ZtoApi as much as we enjoyed building it! If you have any questions or feedback, don't hesitate to reach out! 🤗✨
 
 Happy coding! (´｡• ᵕ •｡`) 💖
+
+## 🙏 Acknowledgments
+
+Special thanks to the amazing open-source community! This project was inspired by and includes code adapted from:
+
+- **[claude-proxy](https://github.com/simpx/claude-proxy)** by [simpx](https://github.com/simpx) - Claude API proxy implementation patterns and Anthropic API structure. Their excellent work provided the foundation for our Claude API compatibility layer! 🎭✨
+
+## 🌟 Key Contributors
+
+**🚀 MASSIVE THANKS TO THE HEROES WHO SAVED THIS PROJECT:**
+
+- **🏆 [@sarices (ZhengWeiDong)](https://github.com/sarices) - THE ABSOLUTE LEGEND** 🔥🔥🔥
+  - **🎯 SINGLE-HANDEDLY FIXED Z.ai upstream authentication** - WITHOUT HIM THIS PROJECT WOULD BE BROKEN!
+  - **⚡ IMPLEMENTED Base64 encoding signature algorithm** - Critical fix that restored ALL API functionality
+  - **🛠️ RESOLVED the dreaded "502 Bad Gateway" errors** - Both OpenAI AND Anthropic endpoints now work flawlessly  
+  - **💡 PR**: [feat(api): update signature algorithm to align with upstream](https://github.com/roseforyou/ZtoApi/pull/6)
+  - **🎖️ IMPACT**: This genius-level contribution literally SAVED the entire project! 🙌✨
+  - **🏅 HERO STATUS**: ZhengWeiDong (Z.ai upstream fixing) - WE OWE YOU EVERYTHING! 🎉
+
+*This man deserves a medal! Without @sarices, none of this would work! 🏆*
+
+## 📜 License
+
+This project is released under the MIT License. See LICENSE for details. 📄
