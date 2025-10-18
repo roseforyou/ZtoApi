@@ -24,7 +24,6 @@ jobs:
       - name: Run opencode
         uses: sst/opencode/github@latest
         env:
-          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: google/gemini-2.5-flash
+          model: opencode/code-supernova
